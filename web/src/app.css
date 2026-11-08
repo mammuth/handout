@@ -1,0 +1,51 @@
+:root {
+  --paper: #f4efe4;
+  --paper-2: #ebe4d4;
+  --card: #fffdf7;
+  --ink: #1c1a16;
+  --ink-2: #4a463f;
+  --muted: #7a7266;
+  --line: #ddd5c4;
+  --ember: #c2410c;
+  --ember-soft: #fde7d7;
+  --ember-fg: #fff;
+  --new: #0f766e;
+  --new-soft: #d7f3ef;
+  --shadow: 0 30px 60px -40px rgba(40, 30, 10, 0.5);
+  --sidebar-w: 300px;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #151310;
+    --paper-2: #1d1a15;
+    --card: #211e18;
+    --ink: #efe8da;
+    --ink-2: #c9c1b1;
+    --muted: #938a7b;
+    --line: #35312a;
+    --ember: #fb923c;
+    --ember-soft: #3a2316;
+    --ember-fg: #1c1a16;
+    --new: #5eead4;
+    --new-soft: #113e3a;
+    --shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.9);
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--ember) 14%, transparent), transparent 60%),
+    radial-gradient(800px 500px at 110% 110%, color-mix(in oklab, var(--new) 10%, transparent), transparent 60%),
+    var(--paper);
+  color: var(--ink);
+  font-family: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--ember); }
+button { font: inherit; }
+#app { height: 100%; }

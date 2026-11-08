@@ -1,0 +1,8 @@
+# Both hosts are public: no mTLS. Replace hosts and upstream with your own.
+handout.example.com {
+	reverse_proxy handout.lan:8080
+}
+
+handout-content.example.com {
+	reverse_proxy handout.lan:8080
+}
