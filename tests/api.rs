@@ -1055,3 +1055,152 @@ async fn mcp_tools() {
     assert_eq!(body["recipients"].as_array().unwrap().len(), 0);
     let _ = Arc::new(app.owner.clone());
 }
+
+#[tokio::test]
+async fn web_ui_auth() {
+    let app = spawn().await;
+    let b = browser();
+    let origin = app.base.clone();
+
+    // no session → no token
+    let res = b
+        .post(app.url("/auth/token"))
+        .header(header::ORIGIN, &origin)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+
+    // origin check on login
+    let res = b
+        .post(app.url("/auth/login"))
+        .header(header::ORIGIN, "http://evil.example")
+        .json(&json!({ "slug": "max", "password": "password123" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    // wrong password
+    let res = b
+        .post(app.url("/auth/login"))
+        .header(header::ORIGIN, &origin)
+        .json(&json!({ "slug": "max", "password": "nope" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    // password login → session cookie + web token
+    let res = b
+        .post(app.url("/auth/login"))
+        .header(header::ORIGIN, &origin)
+        .json(&json!({ "slug": "max", "password": "password123" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body: Value = res.json().await.unwrap();
+    assert_eq!(body["owner"]["slug"], "max");
+    let token = body["access_token"].as_str().unwrap().to_string();
+
+    // token works on the bearer-only API; cookies alone do not
+    assert_eq!(
+        Client::new()
+            .get(app.url("/api/files"))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        b.get(app.url("/api/files")).send().await.unwrap().status(),
+        StatusCode::UNAUTHORIZED
+    );
+
+    // session mints fresh tokens (page reload)
+    let res = b
+        .post(app.url("/auth/token"))
+        .header(header::ORIGIN, &origin)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let t2 = res.json::<Value>().await.unwrap()["access_token"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_ne!(t2, token);
+
+    // logout revokes session and web tokens
+    let res = b
+        .post(app.url("/auth/logout"))
+        .header(header::ORIGIN, &origin)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(
+        b.post(app.url("/auth/token"))
+            .header(header::ORIGIN, &origin)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        Client::new()
+            .get(app.url("/api/files"))
+            .bearer_auth(&token)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        Client::new()
+            .get(app.url("/api/files"))
+            .bearer_auth(&t2)
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
+
+    // API-key login (no slug needed), also accepted by the HTML login form
+    let res = b
+        .post(app.url("/auth/login"))
+        .header(header::ORIGIN, &origin)
+        .json(&json!({ "api_key": app.key }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let nb = no_redirect_browser();
+    let res = nb
+        .post(app.url("/login"))
+        .form(&[
+            ("slug", ""),
+            ("password", app.key.as_str()),
+            ("next", "/admin"),
+        ])
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.headers()[header::LOCATION].to_str().unwrap(), "/admin");
+    let res = nb
+        .post(app.url("/auth/token"))
+        .header(header::ORIGIN, &origin)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+
+    // /admin serves the SPA
+    let res = reqwest::get(app.url("/admin/recipients")).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert!(res.text().await.unwrap().contains("<div id=\"app\">"));
+}

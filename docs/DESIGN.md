@@ -14,7 +14,6 @@ Status: spec agreed 2026-11-08 via kickoff questionnaire. Terminology in `AGENTS
 - Outbound email / notifications — the agent notifies through its own channel with the recipient link.
 - Viewer comments, approvals, e-sign. QR codes.
 - Multi-file bundles (HTML + assets, zip). Single files only; relative subresources inside uploaded HTML are unsupported.
-- Admin web UI. Only login + OAuth consent pages are server-rendered.
 - Recipient groups / company-level sharing.
 
 ## Stack
@@ -87,7 +86,9 @@ Shell host:
 | `POST /api/view/{owner}/{file-id}/identify` | `{email, name?}` → find-or-create recipient, invite, recipient cookie |
 | `/api/*` | owner API, bearer |
 | `/mcp` | MCP Streamable HTTP, bearer |
-| `/login`, `/logout` | owner session (server-rendered) |
+| `/login`, `/logout` | owner session (server-rendered, used by the OAuth flow) |
+| `/auth/login`, `/auth/token`, `/auth/logout` | owner session for the SPA (JSON, Origin-checked) |
+| `/admin`, `/admin/*` | owner web UI (SPA) |
 | `/oauth/authorize`, `/oauth/token`, `/oauth/register` | OAuth 2.1 AS |
 | `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` | metadata |
 | `/assets/*` | embedded frontend |
@@ -167,6 +168,7 @@ Tool results are JSON text. Links in results are absolute (`PUBLIC_URL`).
   - `POST /oauth/token`: `authorization_code` (+ verifier) → access 1 h + refresh 30 d; `refresh_token` rotates.
   - Unauthenticated `/mcp` and `/api/*` → 401 + `WWW-Authenticate: Bearer resource_metadata="{PUBLIC_URL}/.well-known/oauth-protected-resource"`.
 - Owners are created by CLI only (`handout owner add`). Rate limits (in-memory): login, unlock, register.
+- Owner web UI (`/admin`, same SPA bundle): the owner **session cookie** is the browser identity, created by `POST /auth/login` (JSON: slug+password, or just an API key — `hk_…` identifies its owner) or by the server-rendered `/login` form used in the OAuth flow. The SPA never sends cookies to `/api/*`; on boot it calls `POST /auth/token` (cookie + Origin check) and receives a 1 h access token for the first-party OAuth client `web` (same `oauth_tokens` table), held in memory and sent as a bearer like any agent. `POST /auth/logout` deletes the session and revokes the owner's `web` tokens. Net effect: one session concept (OAuth consent + admin), one bearer concept on the API, no CSRF surface on `/api/*`.
 
 ## Security checklist
 

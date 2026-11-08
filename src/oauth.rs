@@ -24,7 +24,7 @@ use crate::{
     ids,
     markdown::escape,
     models::Owner,
-    service, view,
+    view,
 };
 
 pub const SESSION_COOKIE: &str = "hs";
@@ -555,7 +555,7 @@ async fn login_get(Query(q): Query<LoginQuery>) -> Html<String> {
 <form method="post" action="/login">
   <input type="hidden" name="next" value="{next}">
   <label>Owner slug<input name="slug" autocomplete="username" required autofocus></label>
-  <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+  <label>Password or API key<input name="password" type="password" autocomplete="current-password" required></label>
   <button class="primary">Sign in</button>
 </form>"#,
         next = escape(&safe_next(q.next.as_deref())),
@@ -585,15 +585,7 @@ async fn login_post(
     {
         return AppError::RateLimited.into_response();
     }
-    let owner = service::owner_by_slug(&st.db, f.slug.trim())
-        .await
-        .ok()
-        .flatten();
-    let ok = owner
-        .as_ref()
-        .map(|o| auth::verify_password(&f.password, &o.password_hash))
-        .unwrap_or(false);
-    let Some(owner) = owner.filter(|_| ok) else {
+    let Ok(owner) = crate::webauth::authenticate(&st, Some(&f.slug), &f.password).await else {
         return Redirect::to(&format!("/login?error=1&next={}", enc(&next))).into_response();
     };
     match auth::create_session(&st.db, owner.id).await {

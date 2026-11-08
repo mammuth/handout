@@ -23,6 +23,7 @@ Full design: `docs/DESIGN.md`. Human quickstart: `README.md`.
 | **open** | Tracked view of a file version: timestamp, recipient or anonymous, IP hash, user agent. |
 | **content host** | Second hostname (`CONTENT_URL`) serving raw file bytes inside the sandboxed iframe. Never serves HTML on the shell origin. |
 | **shell** | The Svelte viewer page on `PUBLIC_URL`: sidebar + gate forms + iframe. |
+| **admin** | Owner web UI at `/admin` (files, recipients, activity, API keys). Signs in with slug+password or an API key; talks to `/api/*` with a short-lived bearer minted from the owner session (`POST /auth/token`). |
 
 Do **not** use: "user" (ambiguous — say owner or recipient), "guest" / "viewer" (say recipient
 or anonymous), "share" as a noun (it is the verb that creates an invite), "document" (say file),
@@ -33,7 +34,7 @@ or anonymous), "share" as a noun (it is the verb that creates an invite), "docum
 ```
 Cargo.toml            single crate `handout` (bin)
 src/                  axum server, sqlx migrations in migrations/
-web/                  Svelte 5 + Vite viewer, built to web/dist (embedded via rust-embed)
+web/                  Svelte 5 + Vite: viewer (/s/…) and owner admin (/admin), built to web/dist (embedded)
 docs/DESIGN.md        spec and decisions
 deploy/               systemd unit, Caddy snippet, env example
 ```
@@ -52,7 +53,7 @@ cd web && npm run check                 # svelte-check
 ## Conventions
 
 - Conventional Commits. Small, reviewable commits; list paths explicitly.
-- Owner API = bearer only (API key or OAuth token). Viewer API = cookies only, read-mostly, Origin-checked on POST.
+- Owner API = bearer only (API key, OAuth token, or a 1 h `web` token). Viewer API and `/auth/*` = cookies only, Origin-checked on POST. Never add cookie auth to `/api/*`.
 - Public ids / tokens: base58, generated with `rand`. API keys, OAuth codes/tokens and sessions are stored sha256-hashed. File public ids and recipient tokens are link capabilities and stored plain.
 - Cookies: `__Host-` prefix when `PUBLIC_URL` is https; plain names in http dev.
 - Every raw response on the content host carries `Content-Security-Policy: sandbox …; frame-ancestors {PUBLIC_ORIGIN}` and `X-Content-Type-Options: nosniff`.

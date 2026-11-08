@@ -412,7 +412,7 @@ async fn view_home(
     })))
 }
 
-fn check_origin(st: &AppState, headers: &HeaderMap) -> ApiResult<()> {
+pub fn check_origin(st: &AppState, headers: &HeaderMap) -> ApiResult<()> {
     let origin = headers
         .get(header::ORIGIN)
         .and_then(|v| v.to_str().ok())

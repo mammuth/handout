@@ -91,6 +91,7 @@ pub fn build_app(state: AppState) -> HostRouter {
         .merge(shell::router())
         .merge(view::router())
         .merge(oauth::router())
+        .merge(crate::webauth::router())
         .nest("/api", api::router())
         .merge(mcp::router(state.clone()))
         .layer(DefaultBodyLimit::max(cfg.max_upload_bytes + 1024 * 1024))

@@ -18,6 +18,7 @@ pub mod ratelimit;
 pub mod service;
 pub mod shell;
 pub mod view;
+pub mod webauth;
 
 pub use app::{AppState, build_app};
 pub use config::Config;

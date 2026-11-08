@@ -80,52 +80,56 @@ pub fn bearer_token(headers: &HeaderMap) -> Option<String> {
 }
 
 pub async fn resolve_bearer(state: &AppState, token: &str) -> ApiResult<Owner> {
-    let hash = ids::sha256_hex(token.as_bytes());
-    let now = db::now();
     if token.starts_with("hk_") {
-        let row: Option<(i64, Owner)> =
-            sqlx::query_as::<_, (i64, i64, String, String, String, i64)>(
-                "SELECT k.id, o.id, o.slug, o.name, o.password_hash, o.created_at \
-             FROM api_keys k JOIN owners o ON o.id = k.owner_id \
-             WHERE k.key_hash = ? AND k.revoked_at IS NULL",
-            )
-            .bind(&hash)
-            .fetch_optional(&state.db)
-            .await?
-            .map(|(kid, id, slug, name, password_hash, created_at)| {
-                (
-                    kid,
-                    Owner {
-                        id,
-                        slug,
-                        name,
-                        password_hash,
-                        created_at,
-                    },
-                )
-            });
-        if let Some((key_id, owner)) = row {
-            let db = state.db.clone();
-            tokio::spawn(async move {
-                let _ = sqlx::query("UPDATE api_keys SET last_used_at = ? WHERE id = ?")
-                    .bind(now)
-                    .bind(key_id)
-                    .execute(&db)
-                    .await;
-            });
-            return Ok(owner);
-        }
-        return Err(unauthorized(state));
+        return resolve_api_key(state, token).await;
     }
     let owner = sqlx::query_as::<_, Owner>(
         "SELECT o.* FROM oauth_tokens t JOIN owners o ON o.id = t.owner_id \
          WHERE t.token_hash = ? AND t.kind = 'access' AND t.revoked_at IS NULL AND t.expires_at > ?",
     )
-    .bind(&hash)
-    .bind(now)
+    .bind(ids::sha256_hex(token.as_bytes()))
+    .bind(db::now())
     .fetch_optional(&state.db)
     .await?;
     owner.ok_or_else(|| unauthorized(state))
+}
+
+/// Owner behind an `hk_…` API key; bumps `last_used_at`.
+pub async fn resolve_api_key(state: &AppState, token: &str) -> ApiResult<Owner> {
+    let hash = ids::sha256_hex(token.as_bytes());
+    let now = db::now();
+    let row: Option<(i64, Owner)> = sqlx::query_as::<_, (i64, i64, String, String, String, i64)>(
+        "SELECT k.id, o.id, o.slug, o.name, o.password_hash, o.created_at \
+             FROM api_keys k JOIN owners o ON o.id = k.owner_id \
+             WHERE k.key_hash = ? AND k.revoked_at IS NULL",
+    )
+    .bind(&hash)
+    .fetch_optional(&state.db)
+    .await?
+    .map(|(kid, id, slug, name, password_hash, created_at)| {
+        (
+            kid,
+            Owner {
+                id,
+                slug,
+                name,
+                password_hash,
+                created_at,
+            },
+        )
+    });
+    if let Some((key_id, owner)) = row {
+        let db = state.db.clone();
+        tokio::spawn(async move {
+            let _ = sqlx::query("UPDATE api_keys SET last_used_at = ? WHERE id = ?")
+                .bind(now)
+                .bind(key_id)
+                .execute(&db)
+                .await;
+        });
+        return Ok(owner);
+    }
+    Err(unauthorized(state))
 }
 
 /// Middleware for routes that cannot use the extractor (the nested MCP service). Puts `Owner` into extensions.

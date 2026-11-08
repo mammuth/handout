@@ -32,6 +32,10 @@ curl -H "Authorization: Bearer hk_…" -H 'content-type: application/json' \
 # → { "recipient_link": "http://localhost:8080/s/max/proposal-7xKq2mNp4R?r=…" }
 ```
 
+## Owner web UI
+
+`{PUBLIC_URL}/admin` — sign in with your owner slug + password, or paste an API key. Upload files, share them (get recipient links), manage recipients, see who opened what, create API keys.
+
 ## MCP
 
 Endpoint: `{PUBLIC_URL}/mcp` (Streamable HTTP). Auth: OAuth (claude.ai, Claude Code `claude mcp add --transport http handout https://…/mcp`) or `Authorization: Bearer hk_…`.
