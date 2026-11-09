@@ -66,26 +66,10 @@ button { font: inherit; }
 }
 
  is a clear glass pill with a thin
-/* Sidebar items: quiet frosted hover; the active page is a clear glass pill with a thin aurora ring
-   (masked to the 1px edge, so the fill stays transparent). */
+/* Sidebar items: quiet frosted hover; the active page is a clear glass pill with a soft white edge. */
 .glass-item {
-  position: relative;
   border: 1px solid transparent;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.glass-item::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  border-radius: inherit;
-  background: linear-gradient(120deg, rgba(0, 128, 255, 0.85), rgba(255, 20, 147, 0.6) 55%, rgba(0, 255, 255, 0.5));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  opacity: 0;
-  transition: opacity 0.25s;
-  pointer-events: none;
 }
 .glass-item:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -93,12 +77,10 @@ button { font: inherit; }
 }
 .glass-item.current,
 .glass-item.active {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03));
-  backdrop-filter: blur(10px) saturate(1.4);
-  -webkit-backdrop-filter: blur(10px) saturate(1.4);
-  border-color: transparent;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 24px -14px rgba(0, 128, 255, 0.55);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 6px 18px -12px rgba(0, 0, 0, 0.5);
   color: var(--ink);
 }
-.glass-item.current::before,
-.glass-item.active::before { opacity: 1; }
