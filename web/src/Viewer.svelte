@@ -60,6 +60,9 @@
       {:else if data}
         <Brand ownerName={data.owner.name} />
       {/if}
+      {#if data?.is_owner}
+        <a class="admin" href="/admin" title="You own this file. Your visits are not counted.">← Admin</a>
+      {/if}
       {#if data}
         <div class="titles">
           <span class="kind">{kindLabel[data.file.kind]}{data.file.version > 1 ? ` · v${data.file.version}` : ''}</span>
@@ -121,6 +124,8 @@
   h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .download { font-size: 0.85rem; font-weight: 600; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 0.4rem 0.85rem; background: var(--card); white-space: nowrap; }
   .download:hover { border-color: var(--ember); color: var(--ember); }
+  .admin { font-size: 0.85rem; font-weight: 600; color: var(--ember); text-decoration: none; border: 1px solid var(--ember); border-radius: 999px; padding: 0.4rem 0.85rem; background: var(--ember-soft); white-space: nowrap; }
+  .admin:hover { background: var(--ember); color: var(--ember-fg); }
   .size { color: var(--muted); font-weight: 400; margin-left: 0.3rem; }
   .menu { display: none; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); flex-direction: column; justify-content: center; gap: 4px; align-items: center; cursor: pointer; }
   .menu span { width: 16px; height: 2px; background: var(--ink); border-radius: 2px; }

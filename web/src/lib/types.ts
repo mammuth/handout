@@ -15,6 +15,8 @@ export interface ViewResponse {
   recipient: { name: string; email: string | null } | null;
   file: { id: string; title: string; kind: Kind; version: number; filename: string; size: number; mime: string; updated_at: string };
   state: ViewStateKind;
+  /** The signed-in owner of this file: gates skipped, nothing recorded. */
+  is_owner: boolean;
   content_url: string | null;
   download_url: string | null;
   open: { id: number; token: string } | null;

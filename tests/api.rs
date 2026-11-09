@@ -1584,3 +1584,64 @@ async fn blob_garbage_collection() {
     assert!(!tmp.exists());
     assert!(live.exists());
 }
+
+#[tokio::test]
+async fn owner_visits_are_not_tracked() {
+    let app = spawn().await;
+    let f = app
+        .upload_json("Doc", "doc.html", "<h1>hi</h1>", json!({}))
+        .await;
+    let file_id = f["id"].as_str().unwrap().to_string();
+    let s: Value = app
+        .api()
+        .post(app.url(&format!("/api/files/{file_id}/share")))
+        .json(&json!({ "name": "Ann", "email": "ann@acme.com" }))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let ann_id = s["recipient"]["id"].as_str().unwrap().to_string();
+    let link = s["recipient_link"].as_str().unwrap().to_string();
+
+    // the owner signs in, then opens Ann's recipient link to check it (recipient cookie + owner session)
+    let owner = browser();
+    let res = owner
+        .post(app.url("/auth/login"))
+        .header(header::ORIGIN, &app.base)
+        .json(&json!({ "slug": "max", "password": "password123" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    owner.get(&link).send().await.unwrap();
+    let (st, v) = app.view(&owner, &file_id).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(v["state"], "ok");
+    assert_eq!(v["is_owner"], true);
+    assert!(v["open"].is_null(), "no open recorded");
+    assert_eq!(
+        v["recipient"]["name"], "Ann",
+        "the cookie still identifies Ann"
+    );
+
+    // nothing was attributed to Ann
+    let ann: Value = app
+        .api()
+        .get(app.url(&format!("/api/recipients/{ann_id}")))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(ann["last_seen_at"].is_null());
+    assert!(ann["files"][0]["last_opened_at"].is_null());
+    assert_eq!(ann["files"][0]["opens"], 0);
+
+    // an anonymous visitor is not the owner
+    let (_, v) = app.view(&browser(), &file_id).await;
+    assert_eq!(v["is_owner"], false);
+    assert!(v["open"].is_object());
+}

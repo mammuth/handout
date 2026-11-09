@@ -108,7 +108,8 @@ async fn login_and_redirect(
     (jar, Redirect::to(clean)).into_response()
 }
 
-/// The file's owner, signed in (web session) in this browser: skips access/password/email gates; opens unrecorded.
+/// The file's owner, signed in (web session) in this browser: skips access/password/email gates, and
+/// nothing about the visit is recorded (no open, no invite or recipient bump).
 async fn is_owner_session(st: &AppState, owner: &Owner, jar: &CookieJar) -> bool {
     let Some(c) = jar.get(&st.cfg.cookie_name(crate::oauth::SESSION_COOKIE)) else {
         return false;
@@ -394,7 +395,9 @@ async fn view_file(
                 .await?;
         }
     }
-    if let Some(r) = &recipient {
+    if let Some(r) = &recipient
+        && !is_owner
+    {
         touch_seen(&st, &r.id).await?;
     }
     let sidebar = match &recipient {
@@ -410,6 +413,7 @@ async fn view_file(
             "updated_at": rfc3339(latest.created_at),
         },
         "state": state,
+        "is_owner": is_owner,
         "content_url": content_url,
         "download_url": download_url,
         "open": open,
