@@ -58,7 +58,7 @@
           <span></span><span></span><span></span>
         </button>
       {:else if data}
-        <Brand ownerName={data.owner.name} />
+        <Brand ownerName={data.owner.name} stacked />
       {/if}
       {#if data?.is_owner}
         <a class="admin" href="/admin" title="You own this file. Your visits are not counted.">← Admin</a>
