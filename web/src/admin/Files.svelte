@@ -54,32 +54,32 @@
   }
 </script>
 
-<h1>Files <span class="muted small">{files.length} {files.length === 1 ? 'file' : 'files'}</span></h1>
+<div class="hdr">
+  <h1>Files <span class="muted small">{files.length} {files.length === 1 ? 'file' : 'files'}</span></h1>
+  <input class="input" placeholder="Search title or id…" bind:value={q} />
+  <button class="btn primary" onclick={() => input?.click()}>+ Upload</button>
+  <input bind:this={input} type="file" hidden onchange={(e) => pick((e.target as HTMLInputElement).files)} />
+</div>
 <div class="split">
-  <div class="stack">
-    <form class="card" onsubmit={upload}>
-      <div
-        class="drop"
-        class:over
-        role="button"
-        tabindex="0"
-        ondragover={(e) => { e.preventDefault(); over = true; }}
-        ondragleave={() => (over = false)}
-        ondrop={(e) => { e.preventDefault(); over = false; pick(e.dataTransfer?.files ?? null); }}
-        onclick={() => input?.click()}
-        onkeydown={(e) => e.key === 'Enter' && input?.click()}
-      >
-        {#if picked}<strong>{picked.name}</strong> · {formatSize(picked.size)}{:else}Drop an HTML, Markdown, PDF or image here, or click to choose{/if}
-        <input bind:this={input} type="file" hidden onchange={(e) => pick((e.target as HTMLInputElement).files)} />
-      </div>
-      <div class="row" style="margin-top:.7rem">
+  <!-- the whole list is a drop target; "+ Upload" opens the picker -->
+  <div
+    class="stack drop-zone"
+    class:over
+    role="region"
+    aria-label="Files"
+    ondragover={(e) => { e.preventDefault(); over = true; }}
+    ondragleave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) over = false; }}
+    ondrop={(e) => { e.preventDefault(); over = false; pick(e.dataTransfer?.files ?? null); }}
+  >
+    {#if picked}
+      <form class="card row" onsubmit={upload}>
+        <span class="small"><strong>{picked.name}</strong> · {formatSize(picked.size)}</span>
         <input class="input grow" placeholder="Title (defaults to the filename)" bind:value={title} />
-        <button class="btn primary" disabled={!picked || busy}>{busy ? 'Uploading…' : 'Upload'}</button>
-      </div>
-      {#if error}<p class="error">{error}</p>{/if}
-    </form>
-
-    <input class="input" placeholder="Search title or id…" bind:value={q} />
+        <button class="btn primary" disabled={busy}>{busy ? 'Uploading…' : 'Upload'}</button>
+        <button type="button" class="btn" onclick={() => { picked = null; title = ''; if (input) input.value = ''; }}>Cancel</button>
+      </form>
+    {/if}
+    {#if error}<p class="error">{error}</p>{/if}
 
     {#if files.length}
       <div class="tbl"><table class="list">
@@ -101,7 +101,7 @@
         </tbody>
       </table></div>
     {:else}
-      <p class="empty">No files yet. Upload one above, or let an agent do it over MCP.</p>
+      <p class="empty">No files yet. Drop one here, use “+ Upload”, or let an agent do it over MCP.</p>
     {/if}
   </div>
 
