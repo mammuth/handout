@@ -7,6 +7,7 @@ Everything is driven by agents over MCP or REST.
 - One binary: API + MCP (Streamable HTTP) + OAuth 2.1 + embedded viewer
 - SQLite + blob directory, no other services
 - Raw files served from a separate hostname inside a sandboxed iframe
+- Opens, watch time (visible / active seconds) and scroll depth per recipient
 
 Terminology and conventions: [AGENTS.md](AGENTS.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
 

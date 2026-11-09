@@ -20,7 +20,8 @@ Full design: `docs/DESIGN.md`. Human quickstart: `README.md`.
 | **invite** | Stored grant `file × recipient`. Fills the recipient's sidebar and carries "last opened" for the *new* badge. |
 | **access** | Per-file setting: `link` (anyone with the link, default) · `recipients` (invited recipients only) · `off` (revoked). |
 | **gate** | Optional per-file checks on top of access: `password`, `email` (viewer enters email → matched or created as recipient), `expires_at`. |
-| **open** | Tracked view of a file version: timestamp, recipient or anonymous, IP hash, user agent. |
+| **open** | One view session of a file version: timestamp, recipient or anonymous, IP hash, user agent, plus engagement counters filled by heartbeats. |
+| **heartbeat** | Engagement report the shell sends for an open every 15 s and on tab-hide/unload: `visible_seconds` (tab visible), `active_seconds` (visible + input within the last 10 s), `max_scroll_pct`. Input inside the iframe is relayed by a **beacon** script injected into HTML/Markdown on the content host (postMessage only). PDFs/images: visible time only. |
 | **content host** | Second hostname (`CONTENT_URL`) serving raw file bytes inside the sandboxed iframe. Never serves HTML on the shell origin. |
 | **shell** | The Svelte viewer page on `PUBLIC_URL`: sidebar + gate forms + iframe. |
 | **admin** | Owner web UI at `/admin` (files, recipients, activity, API keys). Signs in with slug+password or an API key; talks to `/api/*` with a short-lived bearer minted from the owner session (`POST /auth/token`). |

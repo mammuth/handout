@@ -1,6 +1,6 @@
 <script lang="ts">
   import { api, json, patch } from './auth.svelte';
-  import { formatDate, formatSize, kindLabel } from '../lib/api';
+  import { formatDate, formatDuration, formatSize, kindLabel } from '../lib/api';
   import type { ApiError } from '../lib/types';
   import type { FileDetail, ShareResult } from './types';
   import Copy from './Copy.svelte';
@@ -122,7 +122,7 @@
   {:else}
     <div>
       <span class="badge">{kindLabel[f.kind]}</span>
-      <span class="muted small"> · v{f.version} · {formatSize(f.size)} · {f.opens} {f.opens === 1 ? 'open' : 'opens'}</span>
+      <span class="muted small"> · v{f.version} · {formatSize(f.size)} · {f.opens} {f.opens === 1 ? 'open' : 'opens'}{#if f.active_seconds} · {formatDuration(f.active_seconds)} active{/if}</span>
       <h2 style="margin-top:.3rem">{f.title}</h2>
       <div class="linkbox"><code>{f.file_link}</code><Copy text={f.file_link} /><a class="btn small" href={f.file_link} target="_blank" rel="noopener">Open</a></div>
     </div>
@@ -153,7 +153,7 @@
             <tr>
               <td>
                 <a href="/admin/recipients/{inv.recipient.id}" onclick={(e) => { e.preventDefault(); navigate(`/admin/recipients/${inv.recipient.id}`); }}><strong>{inv.recipient.name}</strong></a>
-                <div class="muted small">{inv.recipient.email ?? ''} {inv.last_opened_at ? `· opened ${formatDate(inv.last_opened_at)}` : '· not opened yet'}</div>
+                <div class="muted small">{inv.recipient.email ?? ''} {inv.last_opened_at ? `· opened ${formatDate(inv.last_opened_at)}` : '· not opened yet'}{#if inv.active_seconds} · {formatDuration(inv.active_seconds)} active{/if}{#if inv.max_scroll_pct} · read {inv.max_scroll_pct}%{/if}</div>
               </td>
               <td style="text-align:right;white-space:nowrap">
                 <Copy text={inv.recipient_link} label="Copy link" />

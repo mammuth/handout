@@ -2,6 +2,7 @@
   import Sidebar from './Sidebar.svelte';
   import Gate from './Gate.svelte';
   import { api, formatSize, kindLabel } from './lib/api';
+  import { startTracking } from './lib/track';
   import type { ApiError, ViewResponse } from './lib/types';
 
   let { owner, file, navigate }: { owner: string; file: string; navigate: (to: string) => void } = $props();
@@ -11,6 +12,8 @@
   let loading = $state(true);
   let menuOpen = $state(false);
   let frameLoaded = $state(false);
+  let frameEl = $state<HTMLIFrameElement | null>(null);
+  let stopTracking: (() => void) | null = null;
 
   async function load() {
     loading = true;
@@ -19,6 +22,8 @@
     try {
       data = await api.view(owner, file);
       document.title = `${data.file.title} · ${data.owner.name}`;
+      stopTracking?.();
+      stopTracking = data.open ? startTracking(owner, file, data.open, () => frameEl) : null;
     } catch (e) {
       error = e as ApiError;
       data = null;
@@ -32,6 +37,7 @@
     file;
     load();
   });
+  $effect(() => () => stopTracking?.());
 
   const sandbox = 'allow-scripts allow-forms allow-popups allow-downloads allow-modals';
 </script>
@@ -76,7 +82,7 @@
         {#if data.file.kind === 'image'}
           <div class="image"><img src={data.content_url} alt={data.file.title} /></div>
         {:else if data.file.kind === 'pdf'}
-          <iframe title={data.file.title} src={data.content_url} class="frame" referrerpolicy="no-referrer"></iframe>
+          <iframe bind:this={frameEl} title={data.file.title} src={data.content_url} class="frame" referrerpolicy="no-referrer"></iframe>
         {:else if data.file.kind === 'other'}
           <div class="center">
             <h2>{data.file.filename}</h2>
@@ -86,6 +92,7 @@
         {:else}
           {#if !frameLoaded}<div class="center muted veil">Loading…</div>{/if}
           <iframe
+            bind:this={frameEl}
             title={data.file.title}
             src={data.content_url}
             class="frame"

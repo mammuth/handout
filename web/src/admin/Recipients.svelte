@@ -1,6 +1,6 @@
 <script lang="ts">
   import { api, json, patch } from './auth.svelte';
-  import { formatDate, kindLabel } from '../lib/api';
+  import { formatDate, formatDuration, kindLabel } from '../lib/api';
   import type { ApiError } from '../lib/types';
   import type { RecipientDetail, RecipientJson } from './types';
   import Copy from './Copy.svelte';
@@ -144,7 +144,7 @@
               <tr>
                 <td>
                   <a href="/admin/files/{f.id}" onclick={(e) => { e.preventDefault(); navigate(`/admin/files/${f.id}`); }}><strong>{f.title}</strong></a>
-                  <div class="muted small">{kindLabel[f.kind]} · {f.last_opened_at ? `opened ${formatDate(f.last_opened_at)}` : 'not opened yet'}</div>
+                  <div class="muted small">{kindLabel[f.kind]} · {f.last_opened_at ? `opened ${formatDate(f.last_opened_at)}` : 'not opened yet'}{#if f.active_seconds} · {formatDuration(f.active_seconds)} active{/if}{#if f.max_scroll_pct} · read {f.max_scroll_pct}%{/if}</div>
                 </td>
                 <td style="text-align:right"><Copy text={f.recipient_link} label="Copy link" /></td>
               </tr>

@@ -190,7 +190,11 @@ async fn files_sharing_and_viewing() {
         res.headers()[header::CONTENT_TYPE],
         "text/html; charset=utf-8"
     );
-    assert_eq!(res.text().await.unwrap(), "<h1>Hello Acme</h1>");
+    let raw = res.text().await.unwrap();
+    assert!(
+        raw.starts_with("<h1>Hello Acme</h1><script>"),
+        "beacon appended to body-less HTML: {raw}"
+    );
 
     // tampered signature → 403
     let bad = content_url.replace("&t=", "&t=1");
@@ -1203,4 +1207,134 @@ async fn web_ui_auth() {
     let res = reqwest::get(app.url("/admin/recipients")).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
     assert!(res.text().await.unwrap().contains("<div id=\"app\">"));
+}
+
+#[tokio::test]
+async fn engagement_heartbeats() {
+    let app = spawn().await;
+    let f = app
+        .upload_json(
+            "Long read",
+            "read.html",
+            "<html><body><h1>Read me</h1><p>…</p></body></html>",
+            json!({}),
+        )
+        .await;
+    let id = f["id"].as_str().unwrap().to_string();
+    let s: Value = app
+        .api()
+        .post(app.url(&format!("/api/files/{id}/share")))
+        .json(&json!({ "name": "Eve Reader", "email": "eve@x.com" }))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let eve = browser();
+    eve.get(s["recipient_link"].as_str().unwrap())
+        .send()
+        .await
+        .unwrap();
+
+    let (_, v) = app.view(&eve, &id).await;
+    assert_eq!(v["state"], "ok");
+    let open_id = v["open"]["id"].as_i64().unwrap();
+    let open_token = v["open"]["token"].as_str().unwrap().to_string();
+
+    // beacon injected before </body>
+    let html = reqwest::get(v["content_url"].as_str().unwrap())
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    let script_at = html.find("handout:\"activity\"").expect("beacon present");
+    assert!(script_at < html.find("</body>").unwrap());
+    assert!(html.ends_with("</body></html>"));
+
+    let hb = |body: Value, origin: &str| {
+        eve.post(app.url(&format!("/api/view/max/{id}/heartbeat")))
+            .header(header::ORIGIN, origin.to_string())
+            .header(header::CONTENT_TYPE, "text/plain")
+            .body(body.to_string())
+    };
+    // origin and token are enforced
+    assert_eq!(
+        hb(
+            json!({ "open_id": open_id, "open_token": open_token, "visible_seconds": 10 }),
+            "http://evil.example"
+        )
+        .send()
+        .await
+        .unwrap()
+        .status(),
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        hb(
+            json!({ "open_id": open_id, "open_token": "nope", "visible_seconds": 10 }),
+            &app.base
+        )
+        .send()
+        .await
+        .unwrap()
+        .status(),
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        hb(
+            json!({ "open_id": open_id + 999, "open_token": open_token, "visible_seconds": 10 }),
+            &app.base
+        )
+        .send()
+        .await
+        .unwrap()
+        .status(),
+        StatusCode::FORBIDDEN
+    );
+    // two heartbeats accumulate; deltas are capped at 60s and active ≤ visible
+    assert_eq!(hb(json!({ "open_id": open_id, "open_token": open_token, "visible_seconds": 15, "active_seconds": 12, "max_scroll_pct": 40 }), &app.base).send().await.unwrap().status(), StatusCode::NO_CONTENT);
+    assert_eq!(hb(json!({ "open_id": open_id, "open_token": open_token, "visible_seconds": 500, "active_seconds": 500, "max_scroll_pct": 85 }), &app.base).send().await.unwrap().status(), StatusCode::NO_CONTENT);
+
+    let opens: Value = app
+        .api()
+        .get(app.url(&format!("/api/files/{id}/opens")))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let o = &opens["opens"][0];
+    assert_eq!(o["visible_seconds"], 75);
+    assert_eq!(o["active_seconds"], 72);
+    assert_eq!(o["max_scroll_pct"], 85);
+    assert_eq!(o["recipient"]["name"], "Eve Reader");
+
+    let d: Value = app
+        .api()
+        .get(app.url(&format!("/api/files/{id}")))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(d["opens"], 1);
+    assert_eq!(d["active_seconds"], 72);
+    assert_eq!(d["invites"][0]["active_seconds"], 72);
+    assert_eq!(d["invites"][0]["max_scroll_pct"], 85);
+    let rid = d["invites"][0]["recipient"]["id"].as_str().unwrap();
+    let r: Value = app
+        .api()
+        .get(app.url(&format!("/api/recipients/{rid}")))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(r["files"][0]["active_seconds"], 72);
+    assert_eq!(r["files"][0]["opens"], 1);
 }

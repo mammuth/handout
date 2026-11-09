@@ -20,6 +20,27 @@ use crate::{
     service, view,
 };
 
+/// Activity beacon injected into HTML/Markdown served inline. Runs inside the sandboxed iframe (opaque
+/// origin) and only talks to the parent shell via postMessage: input activity + scroll depth, once a second.
+pub const BEACON: &str = r#"<script>(function(){var p=window.parent;if(!p||p===window)return;var last=0,maxs=0;function act(){last=Date.now()}
+["mousemove","scroll","keydown","pointerdown","touchstart","wheel"].forEach(function(e){addEventListener(e,act,{passive:true,capture:true})});
+function depth(){var d=document.documentElement,b=document.body;var h=Math.max(d.scrollHeight||0,b?b.scrollHeight:0);var y=(window.scrollY||d.scrollTop||0)+window.innerHeight;var pct=h>0?Math.min(100,Math.round(100*y/h)):100;if(pct>maxs)maxs=pct;return maxs}
+setInterval(function(){p.postMessage({handout:"activity",active:Date.now()-last<10000,scroll:depth()},"*")},1000);addEventListener("load",depth)})();</script>"#;
+
+/// Insert the beacon before `</body>` (case-insensitive), else append.
+pub fn inject_beacon(html: &[u8]) -> Vec<u8> {
+    let lower = html.to_ascii_lowercase();
+    let pos = lower
+        .windows(7)
+        .rposition(|w| w == b"</body>")
+        .unwrap_or(html.len());
+    let mut out = Vec::with_capacity(html.len() + BEACON.len());
+    out.extend_from_slice(&html[..pos]);
+    out.extend_from_slice(BEACON.as_bytes());
+    out.extend_from_slice(&html[pos..]);
+    out
+}
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/{owner}/{file}", get(serve_inline))
@@ -80,7 +101,16 @@ async fn serve(
     let mut resp = if kind == Kind::Markdown && !download {
         let bytes = st.blobs.read(&version.blob_sha256).await?;
         let html = markdown::render_document(&String::from_utf8_lossy(&bytes), &file.title);
-        let mut r = Response::new(Body::from(html));
+        let mut r = Response::new(Body::from(inject_beacon(html.as_bytes())));
+        r.headers_mut().insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("text/html; charset=utf-8"),
+        );
+        r
+    } else if kind == Kind::Html && !download {
+        let bytes = st.blobs.read(&version.blob_sha256).await?;
+        let body = inject_beacon(&bytes);
+        let mut r = Response::new(Body::from(body));
         r.headers_mut().insert(
             header::CONTENT_TYPE,
             HeaderValue::from_static("text/html; charset=utf-8"),

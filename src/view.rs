@@ -36,6 +36,7 @@ pub fn router() -> Router<AppState> {
         .route("/api/view/{owner}/{file}", get(view_file))
         .route("/api/view/{owner}/{file}/unlock", post(unlock))
         .route("/api/view/{owner}/{file}/identify", post(identify))
+        .route("/api/view/{owner}/{file}/heartbeat", post(heartbeat))
 }
 
 #[derive(Deserialize)]
@@ -343,12 +344,13 @@ async fn view_file(
 
     let mut content_url = None;
     let mut download_url = None;
+    let mut open = None;
     if state == ViewState::Ok {
         let (c, d) = content_urls(&st, &owner, &file, &latest);
         content_url = Some(c);
         download_url = Some(d);
         let now = db::now();
-        sqlx::query("INSERT INTO opens (file_id, version_number, recipient_id, ip_hash, user_agent, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+        let open_id = sqlx::query("INSERT INTO opens (file_id, version_number, recipient_id, ip_hash, user_agent, created_at) VALUES (?, ?, ?, ?, ?, ?)")
             .bind(file.id)
             .bind(latest.number)
             .bind(recipient.as_ref().map(|r| r.id.clone()))
@@ -356,7 +358,9 @@ async fn view_file(
             .bind(user_agent(&headers))
             .bind(now)
             .execute(&st.db)
-            .await?;
+            .await?
+            .last_insert_rowid();
+        open = Some(json!({ "id": open_id, "token": open_token(&st, open_id) }));
         if let Some(r) = &recipient {
             if invited {
                 sqlx::query("UPDATE invites SET last_opened_at = ?, last_opened_version = ? WHERE file_id = ? AND recipient_id = ?")
@@ -389,8 +393,71 @@ async fn view_file(
         "state": state,
         "content_url": content_url,
         "download_url": download_url,
+        "open": open,
         "sidebar": sidebar,
     })))
+}
+
+fn open_token(st: &AppState, open_id: i64) -> String {
+    ids::hmac_b64(&st.cfg.secret, format!("open|{open_id}").as_bytes())
+}
+
+#[derive(Deserialize)]
+struct HeartbeatBody {
+    open_id: i64,
+    open_token: String,
+    #[serde(default)]
+    visible_seconds: i64,
+    #[serde(default)]
+    active_seconds: i64,
+    #[serde(default)]
+    max_scroll_pct: i64,
+}
+
+/// Engagement report from the shell for one open. Body is JSON, sent via fetch or `sendBeacon`
+/// (hence parsed from raw bytes: sendBeacon cannot set a JSON content type).
+async fn heartbeat(
+    State(st): State<AppState>,
+    Path((owner_slug, file_id)): Path<(String, String)>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> ApiResult<StatusCode> {
+    check_origin(&st, &headers)?;
+    let hb: HeartbeatBody =
+        serde_json::from_slice(&body).map_err(|_| AppError::bad("invalid heartbeat"))?;
+    if !ids::hmac_verify(
+        &st.cfg.secret,
+        format!("open|{}", hb.open_id).as_bytes(),
+        &hb.open_token,
+    ) {
+        return Err(AppError::Forbidden);
+    }
+    let (_owner, file) = load_owner_file(&st, &owner_slug, &file_id).await?;
+    let now = db::now();
+    // one heartbeat covers at most a minute; opens older than a day stop accepting reports
+    let visible = hb.visible_seconds.clamp(0, 60);
+    let active = hb.active_seconds.clamp(0, visible);
+    let scroll = hb.max_scroll_pct.clamp(0, 100);
+    let n = sqlx::query(
+        "UPDATE opens SET visible_seconds = visible_seconds + ?, active_seconds = active_seconds + ?, \
+         max_scroll_pct = MAX(max_scroll_pct, ?), last_heartbeat_at = ? \
+         WHERE id = ? AND file_id = ? AND created_at > ?",
+    )
+    .bind(visible)
+    .bind(active)
+    .bind(scroll)
+    .bind(now)
+    .bind(hb.open_id)
+    .bind(file.id)
+    .bind(now - 86_400)
+    .execute(&st.db)
+    .await?
+    .rows_affected();
+    if n == 0 {
+        Err(AppError::NotFound)
+    } else {
+        Ok(StatusCode::NO_CONTENT)
+    }
 }
 
 async fn view_home(

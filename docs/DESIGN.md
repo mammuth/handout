@@ -61,7 +61,8 @@ file_versions  id, file_id, number, blob_sha256, size, mime, filename, created_a
 recipients     id (uuid), owner_id, name, email NULL, company NULL, token_hash UNIQUE, token_prefix,
                created_at, last_seen_at NULL                                        UNIQUE(owner_id, email)
 invites        file_id, recipient_id, created_at, last_opened_at NULL, last_opened_version NULL   PK(file_id, recipient_id)
-opens          id, file_id, version_number, recipient_id NULL, ip_hash, user_agent, created_at
+opens          id, file_id, version_number, recipient_id NULL, ip_hash, user_agent, created_at,
+               visible_seconds, active_seconds, max_scroll_pct, last_heartbeat_at NULL
 ```
 
 Identifiers:
@@ -84,6 +85,7 @@ Shell host:
 | `GET /api/view/{owner}/{file-id}` | viewer API (cookies): meta, sidebar, gate state, signed content URL. Records an open |
 | `POST /api/view/{owner}/{file-id}/unlock` | `{password}` → unlock cookie |
 | `POST /api/view/{owner}/{file-id}/identify` | `{email, name?}` → find-or-create recipient, invite, recipient cookie |
+| `POST /api/view/{owner}/{file-id}/heartbeat` | engagement deltas for an open (see Engagement) |
 | `/api/*` | owner API, bearer |
 | `/mcp` | MCP Streamable HTTP, bearer |
 | `/login`, `/logout` | owner session (server-rendered, used by the OAuth flow) |
@@ -119,6 +121,14 @@ Content host:
 3. Access rules: `off` → `off`; `expires_at` passed → `expired`; `recipients` without an invited recipient cookie → `forbidden`; password set and no valid unlock cookie → `password`; `email_gate` and anonymous → `email`; else `ok`.
 4. `is_new` = invite has no `last_opened_version`, or the latest version number is higher.
 5. Gate cookies: `__Host-hu_{file_public_id}` = HMAC(secret, file_id|password_hash) so a password change invalidates unlocks.
+
+## Engagement (watch time)
+
+- `GET /api/view/…` returns `open: {id, token}` (token = HMAC of the open id). The shell runs a tracker for that open: every second, if the tab is visible, `visible_seconds += 1`, and `active_seconds += 1` if there was input in the last 10 s (shell events or beacon messages). Max scroll depth comes from the beacon.
+- Beacon: a `<script>` injected before `</body>` into HTML served inline (and into rendered Markdown). It listens to mousemove/scroll/key/pointer/touch/wheel inside the sandboxed iframe and posts `{handout:"activity", active, scroll}` to the parent once a second. Opaque origin, no cookies, no network — postMessage only. The shell accepts messages only from its own iframe's `contentWindow`.
+- `POST /api/view/{owner}/{file}/heartbeat` `{open_id, open_token, visible_seconds, active_seconds, max_scroll_pct}` every 15 s, on `visibilitychange`→hidden and `pagehide` (via `sendBeacon`, so the body is parsed from raw bytes). Origin-checked; per-heartbeat deltas capped at 60 s, active ≤ visible; opens older than 24 h stop accepting.
+- Roll-ups: `opens` rows carry the counters; file detail sums them and lists per-invite `opens/active_seconds/max_scroll_pct`; recipient detail does the same per file. Exposed over REST, MCP (`get_file`, `get_recipient`, `list_opens`) and the admin UI.
+- Limits: PDFs and images cannot be instrumented (browser viewer) → visible time only, active time undercounted. Uploaded HTML carrying its own CSP meta tag may block the beacon → shell-side signals only. All of it is client-reported, so it is a signal, not an audit trail.
 
 ## Owner API (bearer)
 

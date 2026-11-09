@@ -66,6 +66,9 @@ pub struct InviteJson {
     pub created_at: String,
     pub last_opened_at: Option<String>,
     pub recipient_link: String,
+    pub opens: i64,
+    pub active_seconds: i64,
+    pub max_scroll_pct: i64,
 }
 
 #[derive(Serialize, Debug)]
@@ -75,6 +78,9 @@ pub struct FileDetail {
     pub versions: Vec<VersionJson>,
     pub invites: Vec<InviteJson>,
     pub opens: i64,
+    /// Sum over all opens: seconds the tab was visible / the viewer was actively engaged.
+    pub visible_seconds: i64,
+    pub active_seconds: i64,
 }
 
 #[derive(Serialize, Debug)]
@@ -84,6 +90,9 @@ pub struct RecipientFile {
     pub invited_at: String,
     pub last_opened_at: Option<String>,
     pub recipient_link: String,
+    pub opens: i64,
+    pub active_seconds: i64,
+    pub max_scroll_pct: i64,
 }
 
 #[derive(Serialize, Debug)]
@@ -108,6 +117,9 @@ pub struct OpenJson {
     pub recipient: Option<RecipientRef>,
     pub at: String,
     pub user_agent: String,
+    pub visible_seconds: i64,
+    pub active_seconds: i64,
+    pub max_scroll_pct: i64,
 }
 
 #[derive(Serialize, Debug)]
@@ -574,17 +586,22 @@ pub async fn get_file(st: &AppState, owner: &Owner, public_id: &str) -> ApiResul
     .bind(file.id)
     .fetch_all(&st.db)
     .await?;
-    let invites = sqlx::query_as::<_, (String, String, Option<String>, Option<String>, String, i64, Option<i64>, i64, Option<i64>)>(
-        "SELECT r.id, r.name, r.email, r.company, r.token, r.created_at, r.last_seen_at, i.created_at, i.last_opened_at \
+    let invites = sqlx::query_as::<_, (String, String, Option<String>, Option<String>, String, i64, Option<i64>, i64, Option<i64>, i64, i64, i64)>(
+        "SELECT r.id, r.name, r.email, r.company, r.token, r.created_at, r.last_seen_at, i.created_at, i.last_opened_at, \
+                (SELECT COUNT(*) FROM opens o WHERE o.file_id = i.file_id AND o.recipient_id = r.id), \
+                (SELECT COALESCE(SUM(o.active_seconds), 0) FROM opens o WHERE o.file_id = i.file_id AND o.recipient_id = r.id), \
+                (SELECT COALESCE(MAX(o.max_scroll_pct), 0) FROM opens o WHERE o.file_id = i.file_id AND o.recipient_id = r.id) \
          FROM invites i JOIN recipients r ON r.id = i.recipient_id WHERE i.file_id = ? ORDER BY i.created_at DESC",
     )
     .bind(file.id)
     .fetch_all(&st.db)
     .await?;
-    let opens: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM opens WHERE file_id = ?")
-        .bind(file.id)
-        .fetch_one(&st.db)
-        .await?;
+    let (opens, visible_seconds, active_seconds): (i64, i64, i64) = sqlx::query_as(
+        "SELECT COUNT(*), COALESCE(SUM(visible_seconds), 0), COALESCE(SUM(active_seconds), 0) FROM opens WHERE file_id = ?",
+    )
+    .bind(file.id)
+    .fetch_one(&st.db)
+    .await?;
     Ok(FileDetail {
         summary: summary(st, &owner.slug, &file, &latest),
         versions: versions
@@ -600,7 +617,20 @@ pub async fn get_file(st: &AppState, owner: &Owner, public_id: &str) -> ApiResul
         invites: invites
             .into_iter()
             .map(
-                |(id, name, email, company, token, rc, rs, ic, lo)| InviteJson {
+                |(
+                    id,
+                    name,
+                    email,
+                    company,
+                    token,
+                    rc,
+                    rs,
+                    ic,
+                    lo,
+                    opens,
+                    active_seconds,
+                    max_scroll_pct,
+                )| InviteJson {
                     recipient: RecipientJson {
                         id,
                         name,
@@ -612,10 +642,15 @@ pub async fn get_file(st: &AppState, owner: &Owner, public_id: &str) -> ApiResul
                     created_at: rfc3339(ic),
                     last_opened_at: lo.map(rfc3339),
                     recipient_link: st.cfg.recipient_link(&owner.slug, &file.public_id, &token),
+                    opens,
+                    active_seconds,
+                    max_scroll_pct,
                 },
             )
             .collect(),
         opens,
+        visible_seconds,
+        active_seconds,
     })
 }
 
@@ -860,15 +895,19 @@ pub async fn recipient_detail(
     id: &str,
 ) -> ApiResult<RecipientDetail> {
     let r = load_recipient(st, owner.id, id).await?;
-    let rows = sqlx::query_as::<_, (i64, i64, Option<i64>)>(
-        "SELECT i.file_id, i.created_at, i.last_opened_at FROM invites i JOIN files f ON f.id = i.file_id \
+    let rows = sqlx::query_as::<_, (i64, i64, Option<i64>, i64, i64, i64)>(
+        "SELECT i.file_id, i.created_at, i.last_opened_at, \
+                (SELECT COUNT(*) FROM opens o WHERE o.file_id = i.file_id AND o.recipient_id = i.recipient_id), \
+                (SELECT COALESCE(SUM(o.active_seconds), 0) FROM opens o WHERE o.file_id = i.file_id AND o.recipient_id = i.recipient_id), \
+                (SELECT COALESCE(MAX(o.max_scroll_pct), 0) FROM opens o WHERE o.file_id = i.file_id AND o.recipient_id = i.recipient_id) \
+         FROM invites i JOIN files f ON f.id = i.file_id \
          WHERE i.recipient_id = ? AND f.deleted_at IS NULL ORDER BY i.created_at DESC",
     )
     .bind(&r.id)
     .fetch_all(&st.db)
     .await?;
     let mut files = Vec::with_capacity(rows.len());
-    for (file_id, invited_at, last_opened_at) in rows {
+    for (file_id, invited_at, last_opened_at, opens, active_seconds, max_scroll_pct) in rows {
         let f = sqlx::query_as::<_, FileRow>("SELECT * FROM files WHERE id = ?")
             .bind(file_id)
             .fetch_one(&st.db)
@@ -879,6 +918,9 @@ pub async fn recipient_detail(
             file: summary(st, &owner.slug, &f, &v),
             invited_at: rfc3339(invited_at),
             last_opened_at: last_opened_at.map(rfc3339),
+            opens,
+            active_seconds,
+            max_scroll_pct,
         });
     }
     Ok(RecipientDetail {
@@ -1002,8 +1044,9 @@ pub async fn list_opens(
     since: Option<i64>,
     limit: i64,
 ) -> ApiResult<Vec<OpenJson>> {
-    let rows = sqlx::query_as::<_, (String, String, i64, Option<String>, Option<String>, i64, String)>(
-        "SELECT f.public_id, f.title, o.version_number, o.recipient_id, r.name, o.created_at, o.user_agent \
+    let rows = sqlx::query_as::<_, (String, String, i64, Option<String>, Option<String>, i64, String, i64, i64, i64)>(
+        "SELECT f.public_id, f.title, o.version_number, o.recipient_id, r.name, o.created_at, o.user_agent, \
+                o.visible_seconds, o.active_seconds, o.max_scroll_pct \
          FROM opens o JOIN files f ON f.id = o.file_id LEFT JOIN recipients r ON r.id = o.recipient_id \
          WHERE f.owner_id = ? AND (? IS NULL OR f.public_id = ?) AND (? IS NULL OR o.recipient_id = ?) \
          AND (? IS NULL OR o.created_at >= ?) ORDER BY o.created_at DESC LIMIT ?",
@@ -1020,16 +1063,32 @@ pub async fn list_opens(
     .await?;
     Ok(rows
         .into_iter()
-        .map(|(file_id, title, version, rid, rname, at, ua)| OpenJson {
-            file_id,
-            title,
-            version,
-            recipient: rid.map(|id| RecipientRef {
-                id,
-                name: rname.unwrap_or_default(),
-            }),
-            at: rfc3339(at),
-            user_agent: ua,
-        })
+        .map(
+            |(
+                file_id,
+                title,
+                version,
+                rid,
+                rname,
+                at,
+                ua,
+                visible_seconds,
+                active_seconds,
+                max_scroll_pct,
+            )| OpenJson {
+                file_id,
+                title,
+                version,
+                recipient: rid.map(|id| RecipientRef {
+                    id,
+                    name: rname.unwrap_or_default(),
+                }),
+                at: rfc3339(at),
+                user_agent: ua,
+                visible_seconds,
+                active_seconds,
+                max_scroll_pct,
+            },
+        )
         .collect())
 }

@@ -17,6 +17,7 @@ export interface ViewResponse {
   state: ViewStateKind;
   content_url: string | null;
   download_url: string | null;
+  open: { id: number; token: string } | null;
   sidebar: SidebarEntry[];
 }
 
