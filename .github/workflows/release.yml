@@ -1,14 +1,20 @@
 name: release
 
+# Every push to main is a release: build, test, package, publish. Tags are `<yyyymmdd>-<sha7>`, so
+# `handout-update` (latest) and `handout-update <tag>` (rollback) keep working. Only the default
+# branch builds, which is also where the cargo/npm caches are saved and restored.
 on:
   push:
-    # main builds keep the cargo/npm caches on the default branch, where tag builds can restore them
     branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# An older commit must never become "latest" after a newer one: one release at a time, newest wins.
+concurrency:
+  group: release
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -43,13 +49,13 @@ jobs:
           sha256sum "$name" > "$name.sha256"
 
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes handout-x86_64-linux-musl handout-x86_64-linux-musl.sha256
-
-      - uses: actions/upload-artifact@v5
-        if: "!startsWith(github.ref, 'refs/tags/')"
-        with:
-          name: handout-x86_64-linux-musl
-          path: handout-x86_64-linux-musl*
+        run: |
+          tag="$(date -u +%Y%m%d)-${GITHUB_SHA::7}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag already exists (re-run on the same commit)"
+            exit 0
+          fi
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --generate-notes \
+            handout-x86_64-linux-musl handout-x86_64-linux-musl.sha256
