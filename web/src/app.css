@@ -64,3 +64,39 @@ button { font: inherit; }
   border-radius: var(--radius-lg);
   box-shadow: var(--glass-edge);
 }
+
+/* Sidebar items: frosted hover with a light sweep; active page gets an aurora edge and glow. */
+.glass-item {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid transparent;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.25s, color 0.2s;
+}
+.glass-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.22) 50%, transparent 80%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.glass-item:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.03));
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.glass-item:hover::after { transform: translateX(120%); transition: transform 0.7s ease; }
+.glass-item.current,
+.glass-item.active {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06)) padding-box,
+    linear-gradient(120deg, rgba(0, 128, 255, 0.9), rgba(255, 20, 147, 0.75) 60%, rgba(0, 255, 255, 0.6)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 8px 22px -10px rgba(0, 128, 255, 0.65),
+    0 0 18px -8px rgba(255, 20, 147, 0.6);
+  color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) { .glass-item:hover::after { transition: none; transform: translateX(-120%); } }

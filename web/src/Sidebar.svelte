@@ -50,6 +50,7 @@
       {#each entries as e, i (e.id)}
         <a
           href={e.link}
+          class="glass-item"
           class:current={e.id === currentId}
           class:new={e.is_new && e.id !== currentId}
           style="--i: {i}"
@@ -95,15 +96,12 @@
     align-items: center;
     gap: 0.6rem;
     padding: 0.35rem 0.5rem;
-    border: 1px solid transparent;
     border-radius: var(--radius);
     color: var(--ink);
     text-decoration: none;
     animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     animation-delay: calc(var(--i) * 45ms);
   }
-  nav a:hover { background: var(--paper-2); }
-  nav a.current { background: var(--ember-soft); border-color: rgba(255, 255, 255, 0.22); }
   nav a.current .title, nav a.new .title { font-weight: 600; }
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .title { font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
