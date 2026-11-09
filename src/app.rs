@@ -14,6 +14,7 @@ use axum::{
     http::{HeaderName, HeaderValue, header},
     response::Response,
 };
+use tokio::sync::Semaphore;
 use tower::Service;
 use tower_http::{set_header::SetResponseHeaderLayer, trace::TraceLayer};
 
@@ -34,6 +35,8 @@ pub struct AppState {
     pub blobs: Arc<BlobStore>,
     pub cfg: Arc<Config>,
     pub limiter: Arc<RateLimiter>,
+    /// Caps concurrent PDF renders; each can take hundreds of MB.
+    pub pdf_permits: Arc<Semaphore>,
 }
 
 pub async fn build_state(cfg: Config) -> Result<AppState> {
@@ -44,6 +47,7 @@ pub async fn build_state(cfg: Config) -> Result<AppState> {
         blobs,
         cfg: Arc::new(cfg),
         limiter: Arc::new(RateLimiter::default()),
+        pdf_permits: Arc::new(Semaphore::new(2)),
     })
 }
 

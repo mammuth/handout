@@ -14,6 +14,7 @@ pub mod markdown;
 pub mod mcp;
 pub mod models;
 pub mod oauth;
+pub mod pdf;
 pub mod ratelimit;
 pub mod service;
 pub mod shell;

@@ -329,13 +329,23 @@ pub fn verify_content_sig(
     )
 }
 
-fn content_urls(st: &AppState, owner: &Owner, file: &FileRow, v: &FileVersion) -> (String, String) {
+/// Signed content-host URLs for a version: inline, download and, for HTML and Markdown, the PDF
+/// rendition.
+fn content_urls(
+    st: &AppState,
+    owner: &Owner,
+    file: &FileRow,
+    v: &FileVersion,
+) -> (String, String, Option<String>) {
     let exp = db::now() + CONTENT_SIG_TTL;
     let t = sign_content(st, &owner.slug, &file.public_id, v.number, exp);
     let base = format!("{}/{}/{}", st.cfg.content_url, owner.slug, file.public_id);
+    let pdf = matches!(file.kind(), Kind::Html | Kind::Markdown)
+        .then(|| format!("{base}/pdf?v={}&t={t}", v.number));
     (
         format!("{base}?v={}&t={t}", v.number),
         format!("{base}/download?v={}&t={t}", v.number),
+        pdf,
     )
 }
 
@@ -421,11 +431,13 @@ async fn view_file(
 
     let mut content_url = None;
     let mut download_url = None;
+    let mut pdf_url = None;
     let mut open = None;
     if state == ViewState::Ok {
-        let (c, d) = content_urls(&st, &owner, &file, &latest);
+        let (c, d, p) = content_urls(&st, &owner, &file, &latest);
         content_url = Some(c);
         download_url = Some(d);
+        pdf_url = p;
     }
     if state == ViewState::Ok && !is_owner {
         let now = db::now();
@@ -473,6 +485,7 @@ async fn view_file(
         "is_owner": is_owner,
         "content_url": content_url,
         "download_url": download_url,
+        "pdf_url": pdf_url,
         "open": open,
         "sidebar": sidebar,
     })))

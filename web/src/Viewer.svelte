@@ -66,15 +66,8 @@
         <span class="chip">{kindLabel[data.file.kind]}{data.file.version > 1 ? ` · v${data.file.version}` : ''}</span>
         <span class="spacer"></span>
         {#if data.download_url}
-          {#if data.content_url && (data.file.kind === 'html' || data.file.kind === 'markdown')}
-            <!-- the viewer's own browser renders the PDF: new tab + print dialog, "Save as PDF" there -->
-            <button
-              class="btn"
-              title="Opens the page in a new tab with the print dialog; pick “Save as PDF” there."
-              onclick={() => window.open(`${data?.content_url}#print`, '_blank', 'noopener')}
-            >
-              Save as PDF
-            </button>
+          {#if data.pdf_url}
+            <a class="btn" href={data.pdf_url} download title="Rendered on the server from the file: no scripts, bundled fonts.">PDF</a>
           {/if}
           <a class="btn primary" href={data.download_url} download={data.file.filename}>
             Download · {formatSize(data.file.size)}

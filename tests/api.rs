@@ -1282,10 +1282,6 @@ async fn engagement_heartbeats() {
         .await
         .unwrap();
     let script_at = html.find("handout:\"activity\"").expect("beacon present");
-    assert!(
-        html.contains("location.hash==='#print'"),
-        "print hook for Save as PDF"
-    );
     assert!(script_at < html.find("</body>").unwrap());
     assert!(html.ends_with("</body></html>"));
 
@@ -1707,4 +1703,63 @@ async fn link_previews() {
     assert_eq!(res.status(), StatusCode::OK);
     assert_eq!(res.headers()["content-type"], "image/png");
     assert!(res.bytes().await.unwrap().starts_with(b"\x89PNG"));
+}
+
+#[tokio::test]
+async fn pdf_download() {
+    let app = spawn().await;
+    let c = browser();
+    let f = app
+        .upload_json(
+            "Doc",
+            "doc.html",
+            "<h1>Hello PDF</h1><p>Body text, <b>bold</b>.</p>",
+            json!({}),
+        )
+        .await;
+    let (_, v) = app.view(&c, f["id"].as_str().unwrap()).await;
+    let pdf_url = v["pdf_url"].as_str().expect("pdf_url for html").to_string();
+    let res = c.get(&pdf_url).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(res.headers()["content-type"], "application/pdf");
+    assert_eq!(
+        res.headers()["content-disposition"],
+        "attachment; filename=\"doc.pdf\""
+    );
+    assert_eq!(res.headers()["cache-control"], "private, no-store");
+    let body = res.bytes().await.unwrap();
+    assert!(body.starts_with(b"%PDF"));
+    assert!(body.len() > 10_000, "text set in embedded fonts");
+
+    // markdown goes through the same path
+    let m = app
+        .upload_json(
+            "Notes",
+            "notes.md",
+            "# Notes\n\nSome *markdown*.",
+            json!({}),
+        )
+        .await;
+    let (_, v) = app.view(&c, m["id"].as_str().unwrap()).await;
+    let res = c.get(v["pdf_url"].as_str().unwrap()).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(
+        res.headers()["content-disposition"],
+        "attachment; filename=\"notes.pdf\""
+    );
+    assert!(res.bytes().await.unwrap().starts_with(b"%PDF"));
+
+    // images have no rendition, a bad signature is refused, absurd nesting is refused
+    let i = app
+        .upload_json("Pic", "pic.png", "not really", json!({}))
+        .await;
+    let (_, v) = app.view(&c, i["id"].as_str().unwrap()).await;
+    assert!(v["pdf_url"].is_null());
+    let res = c.get(pdf_url.replace("&t=", "&t=x")).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    let deep = "<div>".repeat(2000);
+    let d = app.upload_json("Deep", "deep.html", &deep, json!({})).await;
+    let (_, v) = app.view(&c, d["id"].as_str().unwrap()).await;
+    let res = c.get(v["pdf_url"].as_str().unwrap()).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
 }

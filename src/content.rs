@@ -16,16 +16,13 @@ use crate::{
     db,
     error::{ApiResult, AppError},
     markdown,
-    models::{Access, Kind},
-    service, shell, view,
+    models::{Access, FileRow, FileVersion, Kind},
+    pdf, service, shell, view,
 };
 
 /// Activity beacon injected into HTML/Markdown served inline. Runs inside the sandboxed iframe (opaque
 /// origin) and only talks to the parent shell via postMessage: input activity + scroll depth, once a second.
-/// Opened top-level with `#print` (the shell's "Save as PDF"), it opens the print dialog once loaded:
-/// the viewer's own browser is the PDF engine, so pages render exactly as seen, scripts included.
-pub const BEACON: &str = r#"<script>(function(){if(location.hash==='#print'){addEventListener("load",function(){setTimeout(function(){window.print()},400)})}
-var p=window.parent;if(!p||p===window)return;var last=0,maxs=0;function act(){last=Date.now()}
+pub const BEACON: &str = r#"<script>(function(){var p=window.parent;if(!p||p===window)return;var last=0,maxs=0;function act(){last=Date.now()}
 ["mousemove","scroll","keydown","pointerdown","touchstart","wheel"].forEach(function(e){addEventListener(e,act,{passive:true,capture:true})});
 function depth(){var d=document.documentElement,b=document.body;var h=Math.max(d.scrollHeight||0,b?b.scrollHeight:0);var y=(window.scrollY||d.scrollTop||0)+window.innerHeight;var pct=h>0?Math.min(100,Math.round(100*y/h)):100;if(pct>maxs)maxs=pct;return maxs}
 setInterval(function(){p.postMessage({handout:"activity",active:Date.now()-last<10000,scroll:depth()},"*")},1000);addEventListener("load",depth)})();</script>"#;
@@ -55,6 +52,7 @@ pub fn router() -> Router<AppState> {
         .route("/robots.txt", get(|| async { shell::robots_txt(ROBOTS) }))
         .route("/{owner}/{file}", get(serve_inline))
         .route("/{owner}/{file}/download", get(serve_download))
+        .route("/{owner}/{file}/pdf", get(serve_pdf))
         .fallback(|| async { StatusCode::NOT_FOUND })
 }
 
@@ -80,13 +78,14 @@ async fn serve_download(
     serve(&st, &owner, &file, q, true).await
 }
 
-async fn serve(
+/// The version a signed content URL points at, or why not: unknown → 404, bad or expired signature,
+/// revoked or expired file → 403.
+async fn authorize(
     st: &AppState,
     owner_slug: &str,
     public_id: &str,
-    q: ContentQuery,
-    download: bool,
-) -> ApiResult<Response> {
+    q: &ContentQuery,
+) -> ApiResult<(FileRow, FileVersion)> {
     let owner = service::owner_by_slug(&st.db, owner_slug)
         .await?
         .ok_or(AppError::NotFound)?;
@@ -101,6 +100,86 @@ async fn serve(
     if file.access() == Access::Off || file.expires_at.is_some_and(|e| e <= db::now()) {
         return Err(AppError::Forbidden);
     }
+    Ok((file, version))
+}
+
+/// PDF rendition of an HTML or Markdown version, rendered here (`pdf.rs`), under the same signed URL
+/// scheme as the raw bytes. Bounded: size cap, nesting cap, two renders at a time, 60 s.
+async fn serve_pdf(
+    State(st): State<AppState>,
+    Path((owner_slug, public_id)): Path<(String, String)>,
+    Query(q): Query<ContentQuery>,
+) -> ApiResult<Response> {
+    let (file, version) = authorize(&st, &owner_slug, &public_id, &q).await?;
+    let kind = file.kind();
+    if !matches!(kind, Kind::Html | Kind::Markdown) {
+        return Err(AppError::bad("only HTML and Markdown files render to PDF"));
+    }
+    if version.size as usize > pdf::MAX_HTML_BYTES {
+        return Err(AppError::TooLarge);
+    }
+    let bytes = st.blobs.read(&version.blob_sha256).await?;
+    let html = match kind {
+        Kind::Markdown => markdown::render_document(&String::from_utf8_lossy(&bytes), &file.title),
+        _ => String::from_utf8_lossy(&bytes).into_owned(),
+    };
+    if pdf::nesting_depth(&html) > pdf::MAX_DEPTH {
+        return Err(AppError::bad("the document nests too deeply to render"));
+    }
+    let _permit = st
+        .pdf_permits
+        .acquire()
+        .await
+        .map_err(|e| AppError::Internal(e.into()))?;
+    let data = pdf::render_async(html, file.title.clone())
+        .await
+        .map_err(AppError::Internal)?;
+    let stem = version
+        .filename
+        .rsplit_once('.')
+        .map(|(s, _)| s)
+        .unwrap_or(&version.filename);
+    let disposition = format!(
+        "attachment; filename=\"{}.pdf\"",
+        stem.replace(['"', '\\', '\r', '\n'], "_")
+    );
+    let mut resp = Response::new(Body::from(data));
+    let h = resp.headers_mut();
+    h.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/pdf"),
+    );
+    h.insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_str(&disposition).unwrap_or(HeaderValue::from_static("attachment")),
+    );
+    h.insert(
+        header::CONTENT_SECURITY_POLICY,
+        HeaderValue::from_str(&format!("frame-ancestors {}", st.cfg.public_url)).unwrap(),
+    );
+    h.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    h.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("private, no-store"),
+    );
+    h.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
+    Ok(resp)
+}
+
+async fn serve(
+    st: &AppState,
+    owner_slug: &str,
+    public_id: &str,
+    q: ContentQuery,
+    download: bool,
+) -> ApiResult<Response> {
+    let (file, version) = authorize(st, owner_slug, public_id, &q).await?;
     let kind = file.kind();
     let disposition = format!(
         "{}; filename=\"{}\"",

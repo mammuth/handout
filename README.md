@@ -15,6 +15,7 @@ Everything is driven by agents over MCP or REST.
 - SQLite + blob directory, no other services
 - Raw files served from a separate hostname inside a sandboxed iframe
 - Opens, watch time (visible / active seconds) and scroll depth per recipient
+- PDF download of HTML and Markdown files, rendered on the server in pure Rust (no browser)
 
 Terminology and conventions: [AGENTS.md](AGENTS.md). Design: [docs/DESIGN.md](docs/DESIGN.md).
 

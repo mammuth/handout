@@ -19,6 +19,7 @@ hmac = "0.13"
 http = "1"
 mime_guess = "2"
 pulldown-cmark = "0.13"
+fulgur = "0.41"
 rand = "0.10"
 rmcp = { version = "3.9", default-features = false, features = ["server", "macros", "transport-streamable-http-server"] }
 rpassword = "7"

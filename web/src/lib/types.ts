@@ -19,6 +19,8 @@ export interface ViewResponse {
   is_owner: boolean;
   content_url: string | null;
   download_url: string | null;
+  /** Server-rendered PDF of an HTML or Markdown file. */
+  pdf_url: string | null;
   open: { id: number; token: string } | null;
   sidebar: SidebarEntry[];
 }

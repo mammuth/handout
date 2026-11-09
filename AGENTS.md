@@ -36,6 +36,7 @@ or anonymous), "share" as a noun (it is the verb that creates an invite), "docum
 Cargo.toml            single crate `handout` (bin)
 src/                  axum server, sqlx migrations in migrations/
 web/                  Svelte 5 + Vite: viewer (/s/…) and owner admin (/admin), built to web/dist (embedded)
+assets/fonts/         DejaVu TTFs embedded for server-side PDF rendering (src/pdf.rs)
 docs/DESIGN.md        spec and decisions
 deploy/               systemd unit, Caddy snippet, env example
 ```
