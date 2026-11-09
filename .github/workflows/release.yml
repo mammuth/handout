@@ -2,6 +2,8 @@ name: release
 
 on:
   push:
+    # main builds keep the cargo/npm caches on the default branch, where tag builds can restore them
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
