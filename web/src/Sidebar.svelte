@@ -69,7 +69,7 @@
     <p class="hint">Open a personal link to see everything shared with you in one place.</p>
   {/if}
 
-  <footer>handout</footer>
+  <footer><img class="mark" src="/favicon.svg" alt="" />handout</footer>
 </aside>
 
 <style>
@@ -115,7 +115,8 @@
   .meta { font-size: 0.78rem; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; }
   .badge { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--new); background: var(--new-soft); padding: 0.08rem 0.4rem; border-radius: 999px; }
   .hint { color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
-  footer { margin-top: auto; padding-top: 1rem; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  footer { display: flex; align-items: center; gap: 0.4rem; margin-top: auto; padding-top: 1rem; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  footer .mark { width: 18px; height: 18px; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @media (max-width: 800px) {
     aside {

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>handout</title>
+  <g transform="rotate(-8 32 34)" stroke="#1c1a16" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M18 8H39L52 21V52Q52 56 48 56H18Q14 56 14 52V12Q14 8 18 8Z" fill="#fffdf7"/>
+    <path d="M39 8V17Q39 21 43 21H52Z" fill="#c2410c"/>
+    <circle cx="25" cy="33" r="3" fill="#1c1a16" stroke="none"/>
+    <circle cx="40" cy="33" r="3" fill="#1c1a16" stroke="none"/>
+    <path d="M28.5 40Q32.5 44 36.5 40" fill="none" stroke-width="3"/>
+    <ellipse cx="20.5" cy="40" rx="3" ry="2" fill="#f59e6b" stroke="none" opacity=".7"/>
+    <ellipse cx="44.5" cy="40" rx="3" ry="2" fill="#f59e6b" stroke="none" opacity=".7"/>
+  </g>
+</svg>

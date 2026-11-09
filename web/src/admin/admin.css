@@ -1,7 +1,7 @@
 .admin { display: flex; min-height: 100%; }
 .admin nav.side { width: 230px; flex: 0 0 auto; padding: 1.4rem 1rem; border-right: 1px solid var(--line); background: color-mix(in oklab, var(--paper-2) 80%, transparent); display: flex; flex-direction: column; gap: 0.2rem; }
 .admin nav.side .brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; margin-bottom: 1.2rem; letter-spacing: -0.01em; }
-.admin nav.side .brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 0 4px var(--ember-soft); }
+.admin nav.side .brand .mark { width: 26px; height: 26px; }
 .admin nav.side a { display: block; padding: 0.5rem 0.7rem; border-radius: 9px; color: var(--ink-2); text-decoration: none; font-weight: 500; }
 .admin nav.side a:hover { background: var(--card); }
 .admin nav.side a.active { background: var(--card); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow); }

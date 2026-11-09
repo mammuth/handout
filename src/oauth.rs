@@ -644,17 +644,17 @@ fn page(title: &str, body: &str) -> Response {
 fn page_html(title: &str, body: &str) -> String {
     format!(
         r#"<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{title} · handout</title><style>
+<title>{title} · handout</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><style>
 :root{{--bg:#f6f1e7;--card:#fffdf8;--fg:#1c1a16;--muted:#6f685c;--line:#e3dccd;--accent:#c2410c;--accent-fg:#fff}}
 @media(prefers-color-scheme:dark){{:root{{--bg:#161411;--card:#1f1c17;--fg:#efe9dc;--muted:#9a9184;--line:#33302a;--accent:#fb923c;--accent-fg:#1c1a16}}}}
 body{{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--fg);font:16px/1.5 ui-sans-serif,system-ui,sans-serif}}
 main{{width:min(26rem,92vw);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.6rem 1.8rem;box-shadow:0 20px 50px -30px rgba(0,0,0,.4)}}
-h1{{font-size:1.1rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 1rem}}h2{{margin:.2rem 0 .8rem;font-size:1.5rem;letter-spacing:-.02em}}
+h1{{display:flex;align-items:center;gap:.5rem;font-size:1.1rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 1rem}}h1 img{{width:1.6rem;height:1.6rem}}h2{{margin:.2rem 0 .8rem;font-size:1.5rem;letter-spacing:-.02em}}
 label{{display:block;margin:.8rem 0 .3rem;font-size:.9rem;color:var(--muted)}}input{{width:100%;box-sizing:border-box;padding:.6rem .7rem;border:1px solid var(--line);border-radius:8px;background:transparent;color:inherit;font:inherit}}
 button{{margin:.9rem .4rem 0 0;padding:.6rem 1.1rem;border-radius:8px;border:1px solid var(--line);background:transparent;color:inherit;font:inherit;cursor:pointer}}
 button.primary{{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}}.muted{{color:var(--muted)}}.error{{color:#b91c1c}}
 .tiny{{margin-top:1.2rem}}.tiny button{{font-size:.8rem;padding:.3rem .6rem;color:var(--muted)}}code{{color:var(--accent)}}
-</style></head><body><main><h1>handout</h1>{body}</main></body></html>"#,
+</style></head><body><main><h1><img src="/favicon.svg" alt="">handout</h1>{body}</main></body></html>"#,
         title = escape(title),
         body = body
     )

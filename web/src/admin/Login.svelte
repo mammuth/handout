@@ -26,7 +26,7 @@
 
 <div class="wrap">
   <form class="card" onsubmit={submit}>
-    <p class="eyebrow">handout</p>
+    <p class="eyebrow"><img class="mark" src="/favicon.svg" alt="" />handout</p>
     <h1>Sign in as owner</h1>
     <div class="tabs">
       <button type="button" class:active={mode === 'password'} onclick={() => (mode = 'password')}>Password</button>
@@ -47,7 +47,8 @@
 <style>
   .wrap { min-height: 100%; display: grid; place-items: center; padding: 1.5rem; }
   form { width: min(24rem, 100%); animation: pop 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-  .eyebrow { margin: 0 0 0.3rem; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ember); font-weight: 700; }
+  .eyebrow { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.3rem; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ember); font-weight: 700; }
+  .mark { width: 22px; height: 22px; }
   h1 { margin: 0 0 1rem; font-size: 1.5rem; letter-spacing: -0.02em; }
   .tabs { display: flex; gap: 0.3rem; background: var(--paper); border-radius: 9px; padding: 0.25rem; }
   .tabs button { flex: 1; border: 0; border-radius: 7px; padding: 0.4rem; background: transparent; color: var(--muted); cursor: pointer; font-weight: 600; }

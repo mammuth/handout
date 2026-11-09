@@ -1,3 +1,5 @@
+<img src="web/public/favicon.svg" alt="" width="96" align="right">
+
 # handout
 
 Share agent-generated files (HTML, Markdown, PDF, images) with people, via links.

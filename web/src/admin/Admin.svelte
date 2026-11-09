@@ -33,7 +33,7 @@
 {:else}
   <div class="admin">
     <nav class="side">
-      <div class="brand"><span class="dot"></span>handout</div>
+      <div class="brand"><img class="mark" src="/favicon.svg" alt="" />handout</div>
       <a href="/admin" class:active={section === 'files'} onclick={(e) => go(e, '/admin')}>Files</a>
       <a href="/admin/recipients" class:active={section === 'recipients'} onclick={(e) => go(e, '/admin/recipients')}>Recipients</a>
       <a href="/admin/activity" class:active={section === 'activity'} onclick={(e) => go(e, '/admin/activity')}>Activity</a>
