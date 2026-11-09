@@ -57,6 +57,12 @@ table.list .fc strong { font-weight: 500; }
 .status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 8px currentColor; color: rgba(74, 222, 128, 0.6); }
 .status.recipients::before { background: #60a5fa; color: rgba(96, 165, 250, 0.6); }
 .status.off::before { background: #71717a; box-shadow: none; }
+table.list.compact { font-size: 0.8rem; }
+table.list.compact th { padding: 0.3rem 0.5rem; }
+table.list.compact td { padding: 0.22rem 0.5rem; white-space: nowrap; }
+table.list.compact td.title { white-space: normal; }
+table.list.compact time { cursor: help; text-decoration: underline dotted transparent; }
+table.list.compact time:hover { text-decoration-color: currentColor; }
 table.list tr.click { cursor: pointer; }
 table.list tr.click:hover td { background: var(--paper-2); }
 table.list tr.selected td { background: var(--ember-soft); }

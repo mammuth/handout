@@ -312,6 +312,20 @@ async fn files_sharing_and_viewing() {
     );
     assert!(opens.iter().any(|o| o["recipient"].is_null()));
 
+    // opens filtered by recipient (recipient activity in admin)
+    let jon_opens: Value = app
+        .api()
+        .get(app.url(&format!("/api/opens?recipient_id={jon_id}")))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let jon_opens = jon_opens["opens"].as_array().unwrap();
+    assert!(!jon_opens.is_empty() && jon_opens.len() < opens.len());
+    assert!(jon_opens.iter().all(|o| o["recipient"]["id"] == jon_id));
+
     // file detail lists invites with recipient links; recipient detail lists files
     let d: Value = app
         .api()

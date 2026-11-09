@@ -2,14 +2,16 @@
   import { api, json, patch } from './auth.svelte';
   import { formatDate, formatDuration, kindLabel } from '../lib/api';
   import type { ApiError } from '../lib/types';
-  import type { RecipientDetail, RecipientJson } from './types';
+  import type { OpenJson, RecipientDetail, RecipientJson } from './types';
   import Copy from './Copy.svelte';
+  import OpensTable from './OpensTable.svelte';
 
   let { selected, navigate }: { selected: string | null; navigate: (to: string) => void } = $props();
 
   let list = $state<RecipientJson[]>([]);
   let q = $state('');
   let detail = $state<RecipientDetail | null>(null);
+  let opens = $state<OpenJson[]>([]);
   let name = $state('');
   let email = $state('');
   let company = $state('');
@@ -27,13 +29,20 @@
   async function loadDetail() {
     if (!selected) {
       detail = null;
+      opens = [];
       return;
     }
     try {
-      detail = await api<RecipientDetail>(`/api/recipients/${selected}`);
-      name = detail.name;
-      email = detail.email ?? '';
-      company = detail.company ?? '';
+      const id = selected;
+      const [d, o] = await Promise.all([
+        api<RecipientDetail>(`/api/recipients/${id}`),
+        api<{ opens: OpenJson[] }>(`/api/opens?recipient_id=${encodeURIComponent(id)}&limit=100`),
+      ]);
+      detail = d;
+      opens = o.opens;
+      name = d.name;
+      email = d.email ?? '';
+      company = d.company ?? '';
     } catch (e) {
       error = (e as ApiError).message;
     }
@@ -153,6 +162,13 @@
         </table>
       {:else}
         <p class="muted small">Nothing shared yet.</p>
+      {/if}
+
+      <h3>Activity</h3>
+      {#if opens.length}
+        <OpensTable {opens} {navigate} who={false} client={false} />
+      {:else}
+        <p class="muted small">No opens yet.</p>
       {/if}
 
       <h3>Home link</h3>
