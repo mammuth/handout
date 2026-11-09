@@ -1645,3 +1645,62 @@ async fn owner_visits_are_not_tracked() {
     assert_eq!(v["is_owner"], false);
     assert!(v["open"].is_object());
 }
+
+#[tokio::test]
+async fn link_previews() {
+    let app = spawn().await;
+    let c = browser();
+    let page = |p: String| {
+        let c = c.clone();
+        async move { c.get(p).send().await.unwrap().text().await.unwrap() }
+    };
+    let f = app
+        .upload_json("Q4 Pricing", "pricing.html", "<h1>x</h1>", json!({}))
+        .await;
+    let id = f["id"].as_str().unwrap().to_string();
+
+    // a link anyone may open previews with its title, the owner and the mascot
+    let html = page(app.url(&format!("/s/max/{id}"))).await;
+    assert!(html.contains("<title>Q4 Pricing</title>"), "{html}");
+    assert!(html.contains(r#"<meta property="og:title" content="Q4 Pricing" />"#));
+    assert!(html.contains(r#"content="HTML page · shared by Max""#));
+    assert!(html.contains(&format!(
+        r#"<meta property="og:url" content="{}/s/max/{id}" />"#,
+        app.base
+    )));
+    assert!(html.contains(&format!(
+        r#"<meta property="og:image" content="{}/og.png" />"#,
+        app.base
+    )));
+    assert!(html.contains(r#"<meta name="twitter:card" content="summary" />"#));
+
+    // gated files keep their title to themselves
+    for patch in [
+        json!({ "password": "s3cret" }),
+        json!({ "password": null, "access": "recipients" }),
+    ] {
+        let res = app
+            .api()
+            .patch(app.url(&format!("/api/files/{id}")))
+            .json(&patch)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let html = page(app.url(&format!("/s/max/{id}"))).await;
+        assert!(!html.contains("Q4 Pricing"), "{patch}: {html}");
+        assert!(html.contains(r#"<meta property="og:title" content="Shared by Max" />"#));
+    }
+
+    // the recipient home, and an unknown link (plain SPA, no card)
+    let html = page(app.url("/s/max")).await;
+    assert!(html.contains(r#"<meta property="og:title" content="Files shared by Max" />"#));
+    let html = page(app.url("/s/max/nope-0000000000")).await;
+    assert!(html.contains("<title>handout</title>") && !html.contains("og:title"));
+
+    // the preview image
+    let res = c.get(app.url("/og.png")).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(res.headers()["content-type"], "image/png");
+    assert!(res.bytes().await.unwrap().starts_with(b"\x89PNG"));
+}

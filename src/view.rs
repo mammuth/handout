@@ -64,7 +64,51 @@ async fn viewer_entry(
             )
             .await
         }
-        None => shell::spa_index().into_response(),
+        None => file_preview(&st, &owner_slug, &file_id).await,
+    }
+}
+
+/// The SPA for a file link with its preview tags. The title is only revealed when anyone with the
+/// link may view the file (`link` access, no password, not expired); otherwise the card names the
+/// owner only. Unknown links get the plain SPA, which shows its own "goes nowhere" page.
+async fn file_preview(st: &AppState, owner_slug: &str, file_id: &str) -> Response {
+    let Ok(Some(owner)) = service::owner_by_slug(&st.db, owner_slug).await else {
+        return shell::spa_index();
+    };
+    let Ok(file) = service::load_file(st, owner.id, file_id).await else {
+        return shell::spa_index();
+    };
+    let public = file.access() == Access::Link
+        && file.password_hash.is_none()
+        && !file.expires_at.is_some_and(|e| e <= db::now());
+    let (title, description) = if public {
+        (
+            file.title.clone(),
+            format!("{} · shared by {}", kind_label(file.kind()), owner.name),
+        )
+    } else {
+        (
+            format!("Shared by {}", owner.name),
+            "Open the link to view.".to_string(),
+        )
+    };
+    shell::spa_index_with_preview(
+        &st.cfg,
+        &shell::Preview {
+            title,
+            description,
+            url: st.cfg.file_link(&owner.slug, &file.public_id),
+        },
+    )
+}
+
+fn kind_label(kind: Kind) -> &'static str {
+    match kind {
+        Kind::Html => "HTML page",
+        Kind::Markdown => "Markdown",
+        Kind::Pdf => "PDF",
+        Kind::Image => "Image",
+        Kind::Other => "File",
     }
 }
 
@@ -78,7 +122,20 @@ async fn home_entry(
         Some(token) => {
             login_and_redirect(&st, &owner_slug, token, &format!("/s/{owner_slug}"), jar).await
         }
-        None => shell::spa_index().into_response(),
+        None => match service::owner_by_slug(&st.db, &owner_slug).await {
+            Ok(Some(owner)) => shell::spa_index_with_preview(
+                &st.cfg,
+                &shell::Preview {
+                    title: format!("Files shared by {}", owner.name),
+                    description: format!(
+                        "Everything {} shared with you, in one place.",
+                        owner.name
+                    ),
+                    url: format!("{}/s/{}", st.cfg.public_url, owner.slug),
+                },
+            ),
+            _ => shell::spa_index(),
+        },
     }
 }
 

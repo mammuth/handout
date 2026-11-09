@@ -10,7 +10,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use rust_embed::Embed;
 
-use crate::{app::AppState, auth, oauth::SESSION_COOKIE};
+use crate::{app::AppState, auth, markdown::escape, oauth::SESSION_COOKIE};
 
 #[derive(Embed)]
 #[folder = "web/dist"]
@@ -24,6 +24,7 @@ pub fn router() -> Router<AppState> {
         .route("/assets/{*path}", get(asset))
         .route("/robots.txt", get(|| async { robots_txt(ROBOTS) }))
         .route("/favicon.svg", get(favicon))
+        .route("/og.png", get(og_image))
         .route(
             "/favicon.ico",
             get(|| async { Redirect::permanent("/favicon.svg") }),
@@ -32,18 +33,56 @@ pub fn router() -> Router<AppState> {
 
 pub fn spa_index() -> Response {
     match Assets::get("index.html") {
-        Some(f) => {
-            let mut r = Html(f.data.into_owned()).into_response();
-            r.headers_mut()
-                .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
-            r
-        }
+        Some(f) => html_page(f.data.into_owned()),
         None => (
             StatusCode::INTERNAL_SERVER_ERROR,
             "frontend not built: run `cd web && npm run build`",
         )
             .into_response(),
     }
+}
+
+/// What messengers and other link unfurlers show for a page.
+pub struct Preview {
+    pub title: String,
+    pub description: String,
+    pub url: String,
+}
+
+/// The SPA with Open Graph / Twitter card tags for this page. Unfurlers read them; the SPA sets its
+/// own title once it runs. The image is always the mascot.
+pub fn spa_index_with_preview(cfg: &crate::config::Config, p: &Preview) -> Response {
+    let Some(f) = Assets::get("index.html") else {
+        return spa_index();
+    };
+    let tags = format!(
+        r#"<title>{t}</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="handout" />
+    <meta property="og:title" content="{t}" />
+    <meta property="og:description" content="{d}" />
+    <meta property="og:url" content="{u}" />
+    <meta property="og:image" content="{i}" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="{t}" />
+    <meta name="twitter:description" content="{d}" />
+    <meta name="twitter:image" content="{i}" />"#,
+        t = escape(&p.title),
+        d = escape(&p.description),
+        u = escape(&p.url),
+        i = escape(&format!("{}/og.png", cfg.public_url)),
+    );
+    let html = String::from_utf8_lossy(&f.data).replacen("<title>handout</title>", &tags, 1);
+    html_page(html.into_bytes())
+}
+
+fn html_page(body: Vec<u8>) -> Response {
+    let mut r = Html(body).into_response();
+    r.headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+    r
 }
 
 async fn asset(Path(path): Path<String>) -> Response {
@@ -73,6 +112,18 @@ async fn favicon() -> Response {
             (header::CACHE_CONTROL, "public, max-age=86400"),
         ],
         include_str!("../web/public/favicon.svg"),
+    )
+        .into_response()
+}
+
+/// The mascot on a paper square, for link previews (`og:image`); rendered from `favicon.svg`.
+async fn og_image() -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, "image/png"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
+        include_bytes!("../web/public/og.png").as_slice(),
     )
         .into_response()
 }
