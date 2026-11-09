@@ -187,7 +187,7 @@ Tool results are JSON text. Links in results are absolute (`PUBLIC_URL`).
 - IP hash = sha256(ip ‖ secret ‖ date). User agent truncated to 200 chars.
 - Upload limit `MAX_UPLOAD_MB` (default 100) via body limit; multipart streamed to a temp file, hashed, moved into the blob dir.
 - Blob dir is never listed or served directly; content-type comes from the version row, not the request.
-- Every response on both hosts carries `X-Robots-Tag: noindex, nofollow, noarchive`. `robots.txt` disallows owner, auth and agent paths only — file links stay fetchable, since a crawler only honors `noindex` on pages it may fetch.
+- Every response on both hosts carries `X-Robots-Tag: noindex, nofollow, noarchive` and defaults to `Cache-Control: no-store`; assets, favicon and `robots.txt` opt into caching. `robots.txt` disallows owner, auth and agent paths only — file links stay fetchable, since a crawler only honors `noindex` on pages it may fetch.
 - Markdown rendering escapes raw HTML blocks? No — raw HTML passes through (owner-authored); it is sandboxed anyway.
 
 ## Config

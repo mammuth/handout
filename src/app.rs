@@ -98,6 +98,15 @@ fn robots_layer() -> SetResponseHeaderLayer<HeaderValue> {
     )
 }
 
+/// Responses carry tokens, signed URLs and recipient data: nothing is cacheable unless a handler says
+/// so (assets, favicon, robots.txt).
+fn no_store_layer() -> SetResponseHeaderLayer<HeaderValue> {
+    SetResponseHeaderLayer::if_not_present(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("no-store"),
+    )
+}
+
 pub fn build_app(state: AppState) -> HostRouter {
     let cfg = state.cfg.clone();
     let shell_csp = shell_csp(&cfg.content_url, "");
@@ -122,10 +131,12 @@ pub fn build_app(state: AppState) -> HostRouter {
             HeaderValue::from_static("strict-origin-when-cross-origin"),
         ))
         .layer(robots_layer())
+        .layer(no_store_layer())
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
     let content = content::router()
         .layer(robots_layer())
+        .layer(no_store_layer())
         .layer(TraceLayer::new_for_http())
         .with_state(state);
     HostRouter {

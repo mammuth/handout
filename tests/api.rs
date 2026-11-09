@@ -1391,6 +1391,29 @@ async fn crawlers_and_caches() {
         assert_eq!(res.headers()["x-robots-tag"], noindex, "{url}");
     }
 
+    // nothing is cacheable unless a handler says so
+    for url in [
+        app.url("/login"),
+        app.url("/api/view/max/nope-0000000000"),
+        format!("{content}/nothing"),
+    ] {
+        let res = c.get(&url).send().await.unwrap();
+        assert_eq!(res.headers()["cache-control"], "no-store", "{url}");
+    }
+    let res = app.api().get(app.url("/api/me")).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(res.headers()["cache-control"], "no-store");
+    let res = c
+        .get(app.url("/s/max/nope-0000000000"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(
+        res.headers()["cache-control"],
+        "no-cache",
+        "SPA keeps its own"
+    );
+
     // robots.txt on both hosts: owner and agent paths blocked, file links left fetchable
     let res = c.get(app.url("/robots.txt")).send().await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
