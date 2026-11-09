@@ -32,7 +32,7 @@
   <Login />
 {:else}
   <div class="admin">
-    <nav class="side">
+    <nav class="side glass">
       <div class="brand"><img class="mark" src="/favicon.svg" alt="" />handout</div>
       <a href="/admin" class:active={section === 'files'} onclick={(e) => go(e, '/admin')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Files</a>
       <a href="/admin/recipients" class:active={section === 'recipients'} onclick={(e) => go(e, '/admin/recipients')}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18.5 14.5A6.5 6.5 0 0 1 21.5 20"/></svg>Recipients</a>

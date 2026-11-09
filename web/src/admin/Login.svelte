@@ -25,7 +25,7 @@
 </script>
 
 <div class="wrap">
-  <form class="card" onsubmit={submit}>
+  <form class="card glass" onsubmit={submit}>
     <p class="eyebrow"><img class="mark" src="/favicon.svg" alt="" />handout</p>
     <h1>Sign in as owner</h1>
     <div class="tabs">
@@ -47,12 +47,12 @@
 <style>
   .wrap { min-height: 100%; display: grid; place-items: center; padding: 1.5rem; }
   form { width: min(24rem, 100%); animation: pop 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-  .eyebrow { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.3rem; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ember); font-weight: 700; }
+  .eyebrow { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.3rem; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
   .mark { width: 22px; height: 22px; }
   h1 { margin: 0 0 1rem; font-size: 1.5rem; letter-spacing: -0.02em; }
-  .tabs { display: flex; gap: 0.3rem; background: var(--paper-2); border-radius: var(--radius); padding: 0.2rem; }
-  .tabs button { flex: 1; border: 0; border-radius: 6px; padding: 0.35rem; background: transparent; color: var(--muted); cursor: pointer; font-weight: 600; }
-  .tabs button.active { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+  .tabs { display: flex; gap: 0.3rem; background: var(--well); border-radius: 999px; padding: 0.2rem; }
+  .tabs button { flex: 1; border: 0; border-radius: 999px; padding: 0.35rem; background: transparent; color: var(--muted); cursor: pointer; font-weight: 600; }
+  .tabs button.active { background: #fff; color: var(--ember-fg); }
   .btn { margin-top: 1.1rem; width: 100%; }
   @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
 </style>
