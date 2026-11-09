@@ -485,6 +485,19 @@ async fn gates_and_access() {
     assert_eq!(p["access"], "recipients");
     let (_, v) = app.view(&anon, &id).await;
     assert_eq!(v["state"], "forbidden");
+    // the signed-in owner sees their own file, without recording an open
+    let owner = browser();
+    let res = owner
+        .post(app.url("/auth/login"))
+        .header(header::ORIGIN, &app.base)
+        .json(&json!({ "slug": "max", "password": "password123" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let (_, v) = app.view(&owner, &id).await;
+    assert_eq!(v["state"], "ok");
+    assert!(v["open"].is_null());
     let s: Value = app
         .api()
         .post(app.url(&format!("/api/files/{id}/share")))

@@ -113,6 +113,14 @@ async fn login_and_redirect(
     (jar, Redirect::to(clean)).into_response()
 }
 
+/// The file's owner, signed in (web session) in this browser: skips access/password/email gates; opens unrecorded.
+async fn is_owner_session(st: &AppState, owner: &Owner, jar: &CookieJar) -> bool {
+    let Some(c) = jar.get(&st.cfg.cookie_name(crate::oauth::SESSION_COOKIE)) else {
+        return false;
+    };
+    matches!(auth::session_owner(&st.db, c.value()).await, Ok(Some(o)) if o.id == owner.id)
+}
+
 async fn current_recipient(st: &AppState, owner_id: i64, jar: &CookieJar) -> Option<Recipient> {
     let token = jar
         .get(&st.cfg.cookie_name(RECIPIENT_COOKIE))?
@@ -205,6 +213,7 @@ pub enum ViewState {
 
 fn evaluate(
     file: &FileRow,
+    is_owner: bool,
     recipient: Option<&Recipient>,
     invited: bool,
     unlocked: bool,
@@ -214,6 +223,9 @@ fn evaluate(
     }
     if file.expires_at.is_some_and(|e| e <= db::now()) {
         return ViewState::Expired;
+    }
+    if is_owner {
+        return ViewState::Ok;
     }
     if file.access() == Access::Recipients && !(recipient.is_some() && invited) {
         return ViewState::Forbidden;
@@ -335,8 +347,10 @@ async fn view_file(
         Some(r) => is_invited(&st, file.id, &r.id).await?,
         None => false,
     };
+    let is_owner = is_owner_session(&st, &owner, &jar).await;
     let state = evaluate(
         &file,
+        is_owner,
         recipient.as_ref(),
         invited,
         is_unlocked(&st, &file, &jar),
@@ -349,6 +363,8 @@ async fn view_file(
         let (c, d) = content_urls(&st, &owner, &file, &latest);
         content_url = Some(c);
         download_url = Some(d);
+    }
+    if state == ViewState::Ok && !is_owner {
         let now = db::now();
         let open_id = sqlx::query("INSERT INTO opens (file_id, version_number, recipient_id, ip_hash, user_agent, created_at) VALUES (?, ?, ?, ?, ?, ?)")
             .bind(file.id)
