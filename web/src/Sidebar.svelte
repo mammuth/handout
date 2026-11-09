@@ -68,7 +68,7 @@
     <p class="hint">Nothing else has been shared with you yet.</p>
   {/if}
 
-  <footer><img class="mark" src="/favicon.svg" alt="" />Powered by handout</footer>
+  <footer><a href="https://github.com/mammuth/handout" target="_blank" rel="noopener"><img class="mark" src="/favicon.svg" alt="" />Powered by handout</a></footer>
 </aside>
 
 <style>
@@ -111,6 +111,8 @@
   .badge { flex: 0 0 auto; font-size: 0.7rem; font-weight: 600; color: var(--rail-accent-fg); background: var(--rail-accent); padding: 0.05rem 0.5rem; border-radius: 999px; }
   .hint { color: var(--rail-muted); font-size: 0.85rem; line-height: 1.4; padding: 0 0.5rem; }
   footer { display: flex; align-items: center; gap: 0.4rem; margin-top: auto; padding: 0.7rem 0.5rem 0.2rem; font-size: 0.75rem; color: var(--rail-muted); }
+  footer a { display: flex; align-items: center; gap: 0.4rem; color: inherit; text-decoration: none; }
+  footer a:hover { color: var(--rail-ink); }
   footer .mark { width: 16px; height: 16px; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @media (max-width: 800px) {
