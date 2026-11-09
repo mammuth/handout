@@ -64,15 +64,15 @@
 
 <style>
   .gate { position: absolute; inset: 0; display: grid; place-items: center; padding: 1.5rem; }
-  .card { width: min(26rem, 100%); background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 1.6rem 1.7rem 1.5rem; box-shadow: var(--shadow); animation: pop 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .card { width: min(26rem, 100%); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.3rem 1.4rem 1.2rem; box-shadow: var(--shadow); animation: pop 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
   .eyebrow { margin: 0 0 0.4rem; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ember); font-weight: 700; }
   h2 { margin: 0 0 0.5rem; font-size: 1.5rem; letter-spacing: -0.02em; line-height: 1.15; }
   .muted { color: var(--muted); margin: 0 0 0.6rem; }
   label { display: block; margin: 0.9rem 0 0; font-size: 0.85rem; color: var(--muted); }
   .opt { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
-  input { display: block; width: 100%; margin-top: 0.3rem; padding: 0.65rem 0.75rem; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; }
+  input { display: block; width: 100%; margin-top: 0.3rem; padding: 0.5rem 0.65rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink); font: inherit; }
   input:focus { outline: 2px solid var(--ember); outline-offset: 1px; border-color: transparent; }
-  button { margin-top: 1.1rem; width: 100%; padding: 0.7rem 1rem; border: 0; border-radius: 10px; background: var(--ember); color: var(--ember-fg); font-weight: 700; cursor: pointer; }
+  button { margin-top: 1rem; width: 100%; padding: 0.55rem 1rem; border: 0; border-radius: var(--radius); background: var(--ember); color: var(--ember-fg); font-weight: 700; cursor: pointer; }
   button:disabled { opacity: 0.6; cursor: wait; }
   .error { color: #b91c1c; margin: 0.6rem 0 0; font-size: 0.9rem; }
   @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }

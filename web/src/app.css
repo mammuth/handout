@@ -1,48 +1,56 @@
 :root {
-  --paper: #f4efe4;
-  --paper-2: #ebe4d4;
-  --card: #fffdf7;
-  --ink: #1c1a16;
-  --ink-2: #4a463f;
-  --muted: #7a7266;
-  --line: #ddd5c4;
-  --ember: #c2410c;
-  --ember-soft: #fde7d7;
+  --paper: #f4f7f7;
+  --paper-2: #edf3f2;
+  --card: #fff;
+  --ink: #102a28;
+  --ink-2: #3c5552;
+  --muted: #5f7573;
+  --line: #dde6e5;
+  --ember: #0f766e;
+  --ember-soft: #e0f2f0;
   --ember-fg: #fff;
   --new: #0f766e;
-  --new-soft: #d7f3ef;
-  --shadow: 0 30px 60px -40px rgba(40, 30, 10, 0.5);
-  --sidebar-w: 300px;
+  --new-soft: #ccfbf1;
+  --shadow: 0 1px 2px rgba(16, 42, 40, 0.06), 0 10px 24px -18px rgba(16, 42, 40, 0.3);
+  --radius: 8px;
+  --rail: #0f3b38;
+  --rail-ink: #e7f3f1;
+  --rail-muted: #93bab5;
+  --rail-line: rgba(255, 255, 255, 0.1);
+  --rail-active: rgba(255, 255, 255, 0.1);
+  --rail-accent: #5eead4;
+  --rail-accent-fg: #0f3b38;
+  --sidebar-w: 280px;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #151310;
-    --paper-2: #1d1a15;
-    --card: #211e18;
-    --ink: #efe8da;
-    --ink-2: #c9c1b1;
-    --muted: #938a7b;
-    --line: #35312a;
-    --ember: #fb923c;
-    --ember-soft: #3a2316;
-    --ember-fg: #1c1a16;
+    --paper: #0b1716;
+    --paper-2: #10211f;
+    --card: #12241f;
+    --ink: #e6f2f0;
+    --ink-2: #b9d3cf;
+    --muted: #8fb3ae;
+    --line: #1f3b38;
+    --ember: #2dd4bf;
+    --ember-soft: #12332f;
+    --ember-fg: #042f2c;
     --new: #5eead4;
     --new-soft: #113e3a;
-    --shadow: 0 30px 60px -40px rgba(0, 0, 0, 0.9);
+    --shadow: 0 10px 24px -18px rgba(0, 0, 0, 0.9);
+    --rail: #071110;
+    --rail-line: #16302d;
+    --rail-active: rgba(255, 255, 255, 0.07);
   }
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body {
   margin: 0;
-  background:
-    radial-gradient(1200px 600px at 10% -10%, color-mix(in oklab, var(--ember) 14%, transparent), transparent 60%),
-    radial-gradient(800px 500px at 110% 110%, color-mix(in oklab, var(--new) 10%, transparent), transparent 60%),
-    var(--paper);
+  background: var(--paper);
   color: var(--ink);
-  font-family: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
-  font-size: 15px;
+  font-family: 'Figtree Variable', 'Figtree', ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }

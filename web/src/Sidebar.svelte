@@ -67,51 +67,57 @@
 
 <style>
   aside {
+    /* dark teal rail: remap the page tokens so nested components (Brand) read on it */
+    --ink: var(--rail-ink);
+    --ink-2: var(--rail-ink);
+    --muted: var(--rail-muted);
+    --line: var(--rail-line);
+    --ember: var(--rail-accent);
+    --ember-soft: color-mix(in oklab, var(--rail-accent) 25%, transparent);
     width: var(--sidebar-w);
     flex: 0 0 auto;
     height: 100%;
     overflow-y: auto;
-    padding: 1.4rem 1.1rem 1rem;
+    padding: 1rem 0.6rem 0.8rem;
     border-right: 1px solid var(--line);
-    background: color-mix(in oklab, var(--paper-2) 80%, transparent);
-    backdrop-filter: blur(12px);
+    background: var(--rail);
+    color: var(--ink);
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.3rem;
   }
-  header { margin-bottom: 0.6rem; }
-  .for { margin: 0.6rem 0 0; color: var(--ink-2); font-size: 0.92rem; }
-  .section { margin: 0.8rem 0 0.4rem; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
-  .count { color: var(--new); font-weight: 700; }
-  nav { display: flex; flex-direction: column; gap: 0.3rem; }
+  header { margin-bottom: 0.4rem; padding: 0 0.5rem; }
+  .for { margin: 0.45rem 0 0; color: var(--ink-2); font-size: 0.88rem; }
+  .section { margin: 0.6rem 0 0.2rem; padding: 0 0.5rem; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+  .count { color: var(--rail-accent); font-weight: 700; }
+  nav { display: flex; flex-direction: column; gap: 0.1rem; }
   nav a {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.1rem;
-    padding: 0.6rem 0.75rem;
-    border-radius: 10px;
-    border: 1px solid transparent;
+    gap: 0.05rem;
+    padding: 0.45rem 0.55rem;
+    border-radius: var(--radius);
     color: var(--ink);
     text-decoration: none;
     animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     animation-delay: calc(var(--i) * 45ms);
   }
-  nav a:hover { background: var(--card); border-color: var(--line); }
-  nav a.current { background: var(--card); border-color: var(--line); box-shadow: var(--shadow); }
+  nav a:hover { background: var(--rail-active); }
+  nav a.current { background: var(--rail-active); box-shadow: inset 2px 0 0 var(--rail-accent); }
   nav a.new .title { font-weight: 700; }
-  .kind { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-  .title { font-size: 0.98rem; line-height: 1.25; letter-spacing: -0.01em; }
-  .meta { font-size: 0.78rem; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; }
-  .badge { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--new); background: var(--new-soft); padding: 0.08rem 0.4rem; border-radius: 999px; }
-  .hint { color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
-  footer { display: flex; align-items: center; gap: 0.4rem; margin-top: auto; padding-top: 1rem; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .kind { font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .title { font-size: 0.93rem; line-height: 1.25; }
+  .meta { font-size: 0.75rem; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; }
+  .badge { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rail-accent-fg); background: var(--rail-accent); padding: 0.05rem 0.4rem; border-radius: 999px; }
+  .hint { color: var(--muted); font-size: 0.88rem; line-height: 1.4; padding: 0 0.5rem; }
+  footer { display: flex; align-items: center; gap: 0.4rem; margin-top: auto; padding: 0.8rem 0.5rem 0; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
   footer .mark { width: 18px; height: 18px; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @media (max-width: 800px) {
     aside {
       position: fixed; inset: 0 auto 0 0; z-index: 20; width: min(86vw, var(--sidebar-w));
       transform: translateX(-104%); transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.2, 1);
-      background: var(--paper-2); box-shadow: var(--shadow);
+      box-shadow: var(--shadow);
     }
     aside.open { transform: none; }
   }

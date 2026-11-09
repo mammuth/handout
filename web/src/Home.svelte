@@ -37,6 +37,6 @@
   .center { text-align: center; max-width: 30rem; }
   .eyebrow { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ember); font-weight: 700; margin: 0 0 0.4rem; }
   h1 { font-size: 2rem; letter-spacing: -0.03em; margin: 0; }
-  .menu { display: none; margin-top: 1rem; padding: 0.6rem 1.1rem; border-radius: 999px; border: 1px solid var(--line); background: var(--card); cursor: pointer; }
+  .menu { display: none; margin-top: 1rem; padding: 0.6rem 1.1rem; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); cursor: pointer; }
   @media (max-width: 800px) { .menu { display: inline-block; } }
 </style>

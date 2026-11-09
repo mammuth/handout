@@ -128,16 +128,16 @@
 <style>
   .layout { display: flex; height: 100%; }
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
-  .topbar { display: flex; align-items: center; gap: 0.9rem; padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--line); background: color-mix(in oklab, var(--paper) 70%, transparent); }
+  .topbar { display: flex; align-items: center; gap: 0.8rem; padding: 0.55rem 1rem; border-bottom: 1px solid var(--line); background: var(--card); }
   .titles { min-width: 0; flex: 1; display: flex; flex-direction: column; }
   .kind { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
   h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .download { font: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1.3; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 0.4rem 0.85rem; background: var(--card); white-space: nowrap; cursor: pointer; }
+  .download { font: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1.3; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: var(--radius); padding: 0.35rem 0.75rem; background: var(--card); white-space: nowrap; cursor: pointer; }
   .download:hover { border-color: var(--ember); color: var(--ember); }
-  .admin { font-size: 0.85rem; font-weight: 600; color: var(--ember); text-decoration: none; border: 1px solid var(--ember); border-radius: 999px; padding: 0.4rem 0.85rem; background: var(--ember-soft); white-space: nowrap; }
+  .admin { font-size: 0.85rem; font-weight: 600; color: var(--ember); text-decoration: none; border: 1px solid var(--ember); border-radius: var(--radius); padding: 0.35rem 0.75rem; background: var(--ember-soft); white-space: nowrap; }
   .admin:hover { background: var(--ember); color: var(--ember-fg); }
   .size { color: var(--muted); font-weight: 400; margin-left: 0.3rem; }
-  .menu { display: none; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); flex-direction: column; justify-content: center; gap: 4px; align-items: center; cursor: pointer; }
+  .menu { display: none; width: 34px; height: 34px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); flex-direction: column; justify-content: center; gap: 4px; align-items: center; cursor: pointer; }
   .menu span { width: 16px; height: 2px; background: var(--ink); border-radius: 2px; }
   .scrim { display: none; position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, 0.35); border: 0; }
   .stage { flex: 1; position: relative; min-height: 0; background: var(--card); }
@@ -149,7 +149,7 @@
   .center h2 { margin: 0 0 0.4rem; letter-spacing: -0.02em; }
   .muted { color: var(--muted); }
   .veil { z-index: 1; }
-  .button { display: inline-block; margin-top: 1rem; background: var(--ember); color: var(--ember-fg); text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 999px; font-weight: 600; }
+  .button { display: inline-block; margin-top: 1rem; background: var(--ember); color: var(--ember-fg); text-decoration: none; padding: 0.5rem 1rem; border-radius: var(--radius); font-weight: 600; }
   @media (max-width: 800px) {
     .menu { display: flex; }
     .scrim { display: block; }
