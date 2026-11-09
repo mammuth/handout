@@ -1203,6 +1203,18 @@ async fn web_ui_auth() {
         .unwrap();
     assert_eq!(res.status(), StatusCode::OK);
 
+    // landing links to the owner sign-in; a signed-in owner is redirected there
+    let landing = reqwest::get(app.url("/"))
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert!(landing.contains("href=\"/admin\""));
+    let res = nb.get(app.url("/")).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::SEE_OTHER);
+    assert_eq!(res.headers()[header::LOCATION], "/admin");
+
     // /admin serves the SPA
     let res = reqwest::get(app.url("/admin/recipients")).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
