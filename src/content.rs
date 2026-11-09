@@ -22,7 +22,10 @@ use crate::{
 
 /// Activity beacon injected into HTML/Markdown served inline. Runs inside the sandboxed iframe (opaque
 /// origin) and only talks to the parent shell via postMessage: input activity + scroll depth, once a second.
-pub const BEACON: &str = r#"<script>(function(){var p=window.parent;if(!p||p===window)return;var last=0,maxs=0;function act(){last=Date.now()}
+/// Opened top-level with `#print` (the shell's "Save as PDF"), it opens the print dialog once loaded:
+/// the viewer's own browser is the PDF engine, so pages render exactly as seen, scripts included.
+pub const BEACON: &str = r#"<script>(function(){if(location.hash==='#print'){addEventListener("load",function(){setTimeout(function(){window.print()},400)})}
+var p=window.parent;if(!p||p===window)return;var last=0,maxs=0;function act(){last=Date.now()}
 ["mousemove","scroll","keydown","pointerdown","touchstart","wheel"].forEach(function(e){addEventListener(e,act,{passive:true,capture:true})});
 function depth(){var d=document.documentElement,b=document.body;var h=Math.max(d.scrollHeight||0,b?b.scrollHeight:0);var y=(window.scrollY||d.scrollTop||0)+window.innerHeight;var pct=h>0?Math.min(100,Math.round(100*y/h)):100;if(pct>maxs)maxs=pct;return maxs}
 setInterval(function(){p.postMessage({handout:"activity",active:Date.now()-last<10000,scroll:depth()},"*")},1000);addEventListener("load",depth)})();</script>"#;

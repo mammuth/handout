@@ -72,6 +72,16 @@
           <a class="download" href={data.download_url} download={data.file.filename}>
             Download <span class="size">{formatSize(data.file.size)}</span>
           </a>
+          {#if data.content_url && (data.file.kind === 'html' || data.file.kind === 'markdown')}
+            <!-- the viewer's own browser renders the PDF: new tab + print dialog, "Save as PDF" there -->
+            <button
+              class="download"
+              title="Opens the page in a new tab with the print dialog; pick “Save as PDF” there."
+              onclick={() => window.open(`${data?.content_url}#print`, '_blank', 'noopener')}
+            >
+              Save as PDF
+            </button>
+          {/if}
         {/if}
       {/if}
     </div>
@@ -122,7 +132,7 @@
   .titles { min-width: 0; flex: 1; display: flex; flex-direction: column; }
   .kind { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
   h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .download { font-size: 0.85rem; font-weight: 600; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 0.4rem 0.85rem; background: var(--card); white-space: nowrap; }
+  .download { font: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1.3; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 0.4rem 0.85rem; background: var(--card); white-space: nowrap; cursor: pointer; }
   .download:hover { border-color: var(--ember); color: var(--ember); }
   .admin { font-size: 0.85rem; font-weight: 600; color: var(--ember); text-decoration: none; border: 1px solid var(--ember); border-radius: 999px; padding: 0.4rem 0.85rem; background: var(--ember-soft); white-space: nowrap; }
   .admin:hover { background: var(--ember); color: var(--ember-fg); }

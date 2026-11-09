@@ -129,6 +129,7 @@ Content host:
 - `POST /api/view/{owner}/{file}/heartbeat` `{open_id, open_token, visible_seconds, active_seconds, max_scroll_pct}` every 15 s, on `visibilitychange`→hidden and `pagehide` (via `sendBeacon`, so the body is parsed from raw bytes). Origin-checked; per-heartbeat deltas capped at 60 s, active ≤ visible; opens older than 24 h stop accepting.
 - Roll-ups: `opens` rows carry the counters; file detail sums them and lists per-invite `opens/active_seconds/max_scroll_pct`; recipient detail does the same per file. Exposed over REST, MCP (`get_file`, `get_recipient`, `list_opens`) and the admin UI.
 - Limits: PDFs and images cannot be instrumented (browser viewer) → visible time only, active time undercounted. Uploaded HTML carrying its own CSP meta tag may block the beacon → shell-side signals only. All of it is client-reported, so it is a signal, not an audit trail.
+- "Save as PDF" (HTML and Markdown files): the shell opens the signed content URL top-level with `#print`; the beacon calls `window.print()` once loaded and the recipient picks "Save as PDF" in the dialog. The recipient's own browser is the PDF engine, so pages render exactly as viewed, scripts included. There is no server-side renderer: no pure-Rust HTML+CSS engine is production-grade, and headless Chromium would mean a browser install, egress filtering and a looser systemd sandbox on the host.
 
 ## Owner API (bearer)
 

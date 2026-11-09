@@ -1282,6 +1282,10 @@ async fn engagement_heartbeats() {
         .await
         .unwrap();
     let script_at = html.find("handout:\"activity\"").expect("beacon present");
+    assert!(
+        html.contains("location.hash==='#print'"),
+        "print hook for Save as PDF"
+    );
     assert!(script_at < html.find("</body>").unwrap());
     assert!(html.ends_with("</body></html>"));
 
