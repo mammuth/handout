@@ -85,7 +85,7 @@
 
     {#if files.length}
       <table class="list">
-        <thead><tr><th>Title</th><th>Kind</th><th>Access</th><th>Updated</th></tr></thead>
+        <thead><tr><th>Title</th><th>Kind</th><th>Access</th><th>Updated</th><th></th></tr></thead>
         <tbody>
           {#each files as f (f.id)}
             <tr class="click" class:selected={f.id === selected} onclick={() => navigate(`/admin/files/${f.id}`)}>
@@ -100,6 +100,7 @@
                 {#if f.expires_at}<span class="badge">expires</span>{/if}
               </td>
               <td class="muted small">{formatDate(f.updated_at)}</td>
+              <td><a class="btn small" href={f.file_link} target="_blank" rel="noopener" title="View as a recipient would (your visit is not counted)" onclick={(e) => e.stopPropagation()}>Open ↗</a></td>
             </tr>
           {/each}
         </tbody>
