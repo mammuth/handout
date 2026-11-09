@@ -11,7 +11,7 @@ use anyhow::Result;
 use axum::{
     Router,
     extract::{DefaultBodyLimit, Request},
-    http::{HeaderValue, header},
+    http::{HeaderName, HeaderValue, header},
     response::Response,
 };
 use tower::Service;
@@ -89,6 +89,15 @@ pub fn shell_csp(content_url: &str, form_action: &str) -> String {
     )
 }
 
+/// Nothing on either host is for search engines: file links are unguessable and must stay out of
+/// indexes. `if_not_present` on every response, so handlers never have to think about it.
+fn robots_layer() -> SetResponseHeaderLayer<HeaderValue> {
+    SetResponseHeaderLayer::if_not_present(
+        HeaderName::from_static("x-robots-tag"),
+        HeaderValue::from_static("noindex, nofollow, noarchive"),
+    )
+}
+
 pub fn build_app(state: AppState) -> HostRouter {
     let cfg = state.cfg.clone();
     let shell_csp = shell_csp(&cfg.content_url, "");
@@ -112,9 +121,11 @@ pub fn build_app(state: AppState) -> HostRouter {
             header::REFERRER_POLICY,
             HeaderValue::from_static("strict-origin-when-cross-origin"),
         ))
+        .layer(robots_layer())
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
     let content = content::router()
+        .layer(robots_layer())
         .layer(TraceLayer::new_for_http())
         .with_state(state);
     HostRouter {

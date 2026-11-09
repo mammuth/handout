@@ -22,8 +22,12 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(landing))
         .route("/assets/{*path}", get(asset))
+        .route("/robots.txt", get(|| async { robots_txt(ROBOTS) }))
         .route("/favicon.svg", get(favicon))
-        .route("/favicon.ico", get(|| async { Redirect::permanent("/favicon.svg") }))
+        .route(
+            "/favicon.ico",
+            get(|| async { Redirect::permanent("/favicon.svg") }),
+        )
 }
 
 pub fn spa_index() -> Response {
@@ -72,6 +76,32 @@ async fn favicon() -> Response {
     )
         .into_response()
 }
+
+/// A `robots.txt` body as a response; the content host serves its own through this too.
+pub fn robots_txt(body: &'static str) -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, "text/plain; charset=utf-8"),
+            (header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
+        body,
+    )
+        .into_response()
+}
+
+/// Owner, auth and agent endpoints are off limits. File links (`/s/…`) stay fetchable on purpose: a
+/// crawler only honors `noindex` on pages it was allowed to fetch.
+const ROBOTS: &str = "# Nothing here is for search engines; every response carries X-Robots-Tag: noindex.\n\
+# File links (/s/...) stay fetchable so crawlers see that header and drop them.\n\
+User-agent: *\n\
+Disallow: /admin\n\
+Disallow: /api/\n\
+Disallow: /auth/\n\
+Disallow: /login\n\
+Disallow: /logout\n\
+Disallow: /mcp\n\
+Disallow: /oauth/\n\
+Disallow: /.well-known/\n";
 
 /// Signed-in owners go straight to the admin; everyone else gets the landing with a sign-in link.
 async fn landing(State(st): State<AppState>, jar: CookieJar) -> Response {

@@ -58,4 +58,5 @@ cd web && npm run check                 # svelte-check
 - Public ids / tokens: base58, generated with `rand`. API keys, OAuth codes/tokens and sessions are stored sha256-hashed. File public ids and recipient tokens are link capabilities and stored plain.
 - Cookies: `__Host-` prefix when `PUBLIC_URL` is https; plain names in http dev.
 - Every raw response on the content host carries `Content-Security-Policy: sandbox …; frame-ancestors {PUBLIC_ORIGIN}` and `X-Content-Type-Options: nosniff`.
+- Every response on both hosts carries `X-Robots-Tag: noindex, nofollow, noarchive` (layer in `app.rs`).
 - No external requests from the shell (fonts bundled).

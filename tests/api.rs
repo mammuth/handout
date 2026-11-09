@@ -713,7 +713,9 @@ async fn oauth_flow() {
     // consent page
     let res = b.get(app.url(&authz)).send().await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
-    let csp = res.headers()[header::CONTENT_SECURITY_POLICY].to_str().unwrap();
+    let csp = res.headers()[header::CONTENT_SECURITY_POLICY]
+        .to_str()
+        .unwrap();
     assert!(
         csp.contains("form-action 'self' http://localhost:9999;"),
         "{csp}"
@@ -1367,4 +1369,38 @@ async fn engagement_heartbeats() {
         .unwrap();
     assert_eq!(r["files"][0]["active_seconds"], 72);
     assert_eq!(r["files"][0]["opens"], 1);
+}
+
+#[tokio::test]
+async fn crawlers_and_caches() {
+    let app = spawn().await;
+    let c = browser();
+    let content = app.state.cfg.content_url.clone();
+    let noindex = "noindex, nofollow, noarchive";
+
+    // every response on both hosts says noindex, including errors and the content fallback
+    for url in [
+        app.url("/"),
+        app.url("/login"),
+        app.url("/s/max/nope-0000000000"),
+        app.url("/api/view/max/nope-0000000000"),
+        format!("{content}/max/nope-0000000000?t=x"),
+        format!("{content}/nothing"),
+    ] {
+        let res = c.get(&url).send().await.unwrap();
+        assert_eq!(res.headers()["x-robots-tag"], noindex, "{url}");
+    }
+
+    // robots.txt on both hosts: owner and agent paths blocked, file links left fetchable
+    let res = c.get(app.url("/robots.txt")).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(res.headers()["cache-control"], "public, max-age=86400");
+    let body = res.text().await.unwrap();
+    for p in ["/admin", "/api/", "/auth/", "/mcp", "/oauth/"] {
+        assert!(body.contains(&format!("Disallow: {p}\n")), "{p}");
+    }
+    assert!(!body.contains("Disallow: /s"), "file links stay fetchable");
+    let res = c.get(format!("{content}/robots.txt")).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert!(res.text().await.unwrap().contains("User-agent: *"));
 }

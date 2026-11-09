@@ -17,7 +17,7 @@ use crate::{
     error::{ApiResult, AppError},
     markdown,
     models::{Access, Kind},
-    service, view,
+    service, shell, view,
 };
 
 /// Activity beacon injected into HTML/Markdown served inline. Runs inside the sandboxed iframe (opaque
@@ -41,8 +41,15 @@ pub fn inject_beacon(html: &[u8]) -> Vec<u8> {
     out
 }
 
+/// Raw bytes need a signed URL, so there is nothing to crawl. Left fetchable rather than disallowed: a
+/// leaked signed URL should be fetched, seen as `noindex` and dropped, not listed as a bare URL.
+const ROBOTS: &str = "# Raw file bytes, served only with a signed URL; every response carries X-Robots-Tag: noindex.\n\
+User-agent: *\n\
+Disallow:\n";
+
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route("/robots.txt", get(|| async { shell::robots_txt(ROBOTS) }))
         .route("/{owner}/{file}", get(serve_inline))
         .route("/{owner}/{file}/download", get(serve_download))
         .fallback(|| async { StatusCode::NOT_FOUND })
