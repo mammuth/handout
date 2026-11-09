@@ -1,8 +1,10 @@
-# Both hosts are public: no mTLS. Replace hosts and upstream with your own.
+# Both hosts are public: no mTLS (recipients are outside the homelab).
 handout.example.com {
+	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy handout.lan:8080
 }
 
 handout-content.example.com {
+	header Strict-Transport-Security "max-age=31536000"
 	reverse_proxy handout.lan:8080
 }

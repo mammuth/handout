@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Install or update handout from a GitHub release. Usage: handout-update [tag]  (default: latest)
+# Private repo: put a fine-grained token (Contents: read, this repo only) in /etc/handout/github-token.
+set -euo pipefail
+
+REPO=mammuth/handout
+ASSET=handout-x86_64-linux-musl
+BIN=/usr/local/bin/handout
+TOKEN_FILE=/etc/handout/github-token
+HEALTH_URL=http://127.0.0.1:8080/
+
+auth=()
+[[ -r $TOKEN_FILE ]] && auth=(-H "Authorization: Bearer $(<"$TOKEN_FILE")")
+api() { curl -fsSL "${auth[@]}" -H "X-GitHub-Api-Version: 2022-11-28" "$@"; }
+
+tag=${1:-}
+if [[ -z $tag ]]; then
+  release=$(api https://api.github.com/repos/$REPO/releases/latest)
+else
+  release=$(api "https://api.github.com/repos/$REPO/releases/tags/$tag")
+fi
+tag=$(jq -r .tag_name <<<"$release")
+asset_url() { jq -r --arg n "$1" '.assets[] | select(.name == $n) | .url' <<<"$release"; }
+
+current=$(cat "$BIN.version" 2>/dev/null || echo none)
+if [[ $tag == "$current" ]]; then
+  echo "already on $tag"
+  exit 0
+fi
+echo "updating $current -> $tag"
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+api -H "Accept: application/octet-stream" -o "$tmp/$ASSET" "$(asset_url "$ASSET")"
+api -H "Accept: application/octet-stream" -o "$tmp/$ASSET.sha256" "$(asset_url "$ASSET.sha256")"
+(cd "$tmp" && sha256sum -c "$ASSET.sha256")
+install -m 0755 "$tmp/$ASSET" "$BIN.new"
+
+[[ -e $BIN ]] && cp -p "$BIN" "$BIN.prev" && cp -p "$BIN.version" "$BIN.prev.version" 2>/dev/null || true
+mv -f "$BIN.new" "$BIN"
+echo "$tag" >"$BIN.version"
+
+systemctl restart handout
+for _ in $(seq 20); do
+  if curl -fsS -o /dev/null "$HEALTH_URL"; then
+    echo "handout $tag healthy"
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "health check failed, rolling back to $current" >&2
+journalctl -u handout -n 30 --no-pager >&2 || true
+if [[ -e $BIN.prev ]]; then
+  mv -f "$BIN.prev" "$BIN"
+  mv -f "$BIN.prev.version" "$BIN.version" 2>/dev/null || true
+  systemctl restart handout
+fi
+exit 1
