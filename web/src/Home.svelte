@@ -16,8 +16,6 @@
 <div class="layout">
   {#if data}
     <Sidebar ownerName={data.owner.name} recipient={data.recipient} entries={data.sidebar} {navigate} bind:open={menuOpen} />
-  {:else}
-    <Sidebar ownerName="…" recipient={null} entries={[]} {navigate} bind:open={menuOpen} />
   {/if}
   <section class="main">
     <div class="center">

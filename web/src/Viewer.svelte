@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Brand from './Brand.svelte';
   import Sidebar from './Sidebar.svelte';
   import Gate from './Gate.svelte';
   import { api, formatSize, kindLabel } from './lib/api';
@@ -42,19 +43,23 @@
   const sandbox = 'allow-scripts allow-forms allow-popups allow-downloads allow-modals';
 </script>
 
+<!-- The sidebar lists what was shared with a recipient; anonymous viewers have no such list, so they
+     get the full width and the owner attribution moves into the top bar. -->
 <div class="layout">
-  {#if data}
+  {#if data?.recipient}
     <Sidebar ownerName={data.owner.name} recipient={data.recipient} entries={data.sidebar} currentId={data.file.id} {navigate} bind:open={menuOpen} />
-  {:else}
-    <Sidebar ownerName="…" recipient={null} entries={[]} {navigate} bind:open={menuOpen} />
   {/if}
   {#if menuOpen}<button class="scrim" aria-label="Close menu" onclick={() => (menuOpen = false)}></button>{/if}
 
   <section class="main">
     <div class="topbar">
-      <button class="menu" aria-label="Open menu" onclick={() => (menuOpen = !menuOpen)}>
-        <span></span><span></span><span></span>
-      </button>
+      {#if data?.recipient}
+        <button class="menu" aria-label="Open menu" onclick={() => (menuOpen = !menuOpen)}>
+          <span></span><span></span><span></span>
+        </button>
+      {:else if data}
+        <Brand ownerName={data.owner.name} />
+      {/if}
       {#if data}
         <div class="titles">
           <span class="kind">{kindLabel[data.file.kind]}{data.file.version > 1 ? ` · v${data.file.version}` : ''}</span>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Brand from './Brand.svelte';
   import { formatDate, kindLabel } from './lib/api';
   import type { SidebarEntry } from './lib/types';
 
@@ -11,7 +12,7 @@
     open = $bindable(false),
   }: {
     ownerName: string;
-    recipient: { name: string } | null;
+    recipient: { name: string };
     entries: SidebarEntry[];
     currentId?: string | null;
     navigate: (to: string) => void;
@@ -30,14 +31,8 @@
 
 <aside class:open>
   <header>
-    <div class="brand">
-      <span class="dot"></span>
-      <span class="from">from</span>
-      <strong>{ownerName}</strong>
-    </div>
-    {#if recipient}
-      <p class="for">Shared with <strong>{recipient.name}</strong></p>
-    {/if}
+    <Brand {ownerName} />
+    <p class="for">Shared with <strong>{recipient.name}</strong></p>
   </header>
 
   {#if entries.length}
@@ -63,10 +58,8 @@
         </a>
       {/each}
     </nav>
-  {:else if recipient}
-    <p class="hint">Nothing else has been shared with you yet.</p>
   {:else}
-    <p class="hint">Open a personal link to see everything shared with you in one place.</p>
+    <p class="hint">Nothing else has been shared with you yet.</p>
   {/if}
 
   <footer><img class="mark" src="/favicon.svg" alt="" />handout</footer>
@@ -87,10 +80,6 @@
     gap: 0.4rem;
   }
   header { margin-bottom: 0.6rem; }
-  .brand { display: flex; align-items: baseline; gap: 0.45rem; font-size: 1.05rem; letter-spacing: -0.01em; }
-  .brand strong { font-weight: 700; font-variation-settings: 'wdth' 90; }
-  .from { color: var(--muted); font-size: 0.85rem; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 0 4px var(--ember-soft); align-self: center; }
   .for { margin: 0.6rem 0 0; color: var(--ink-2); font-size: 0.92rem; }
   .section { margin: 0.8rem 0 0.4rem; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
   .count { color: var(--new); font-weight: 700; }
