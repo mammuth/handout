@@ -6,6 +6,11 @@ Share agent-generated files (HTML, Markdown, PDF, images) with people, via links
 Give a recipient one identity; every file you later share with them shows up in their sidebar.
 Everything is driven by agents over MCP or REST.
 
+> [!WARNING]
+> **This project is 100% vibe coded.** AI agents wrote the code, and no human has reviewed it line by line.
+> Treat it with matching care: read the code before trusting it, don't put sensitive files on it without
+> your own review, and expect rough edges in security, auth and data handling.
+
 - One binary: API + MCP (Streamable HTTP) + OAuth 2.1 + embedded viewer
 - SQLite + blob directory, no other services
 - Raw files served from a separate hostname inside a sandboxed iframe
