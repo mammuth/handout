@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Brand from './Brand.svelte';
   import Sidebar from './Sidebar.svelte';
   import Gate from './Gate.svelte';
   import { api, formatSize, kindLabel } from './lib/api';
@@ -57,31 +56,29 @@
         <button class="menu" aria-label="Open menu" onclick={() => (menuOpen = !menuOpen)}>
           <span></span><span></span><span></span>
         </button>
-      {:else if data}
-        <Brand ownerName={data.owner.name} stacked />
       {/if}
       {#if data?.is_owner}
-        <a class="admin" href="/admin" title="You own this file. Your visits are not counted.">← Admin</a>
+        <a class="btn" href="/admin" title="You own this file. Your visits are not counted.">← Admin</a>
       {/if}
       {#if data}
-        <div class="titles">
-          <span class="kind">{kindLabel[data.file.kind]}{data.file.version > 1 ? ` · v${data.file.version}` : ''}</span>
-          <h1>{data.file.title}</h1>
-        </div>
+        <!-- breadcrumb carries the owner attribution, with or without the sidebar -->
+        <h1 class="crumb"><span class="owner">{data.owner.name} /</span> {data.file.title}</h1>
+        <span class="chip">{kindLabel[data.file.kind]}{data.file.version > 1 ? ` · v${data.file.version}` : ''}</span>
+        <span class="spacer"></span>
         {#if data.download_url}
-          <a class="download" href={data.download_url} download={data.file.filename}>
-            Download <span class="size">{formatSize(data.file.size)}</span>
-          </a>
           {#if data.content_url && (data.file.kind === 'html' || data.file.kind === 'markdown')}
             <!-- the viewer's own browser renders the PDF: new tab + print dialog, "Save as PDF" there -->
             <button
-              class="download"
+              class="btn"
               title="Opens the page in a new tab with the print dialog; pick “Save as PDF” there."
               onclick={() => window.open(`${data?.content_url}#print`, '_blank', 'noopener')}
             >
               Save as PDF
             </button>
           {/if}
+          <a class="btn primary" href={data.download_url} download={data.file.filename}>
+            Download · {formatSize(data.file.size)}
+          </a>
         {/if}
       {/if}
     </div>
@@ -128,20 +125,20 @@
 <style>
   .layout { display: flex; height: 100%; }
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
-  .topbar { display: flex; align-items: center; gap: 0.8rem; padding: 0.55rem 1rem; border-bottom: 1px solid var(--line); background: var(--card); }
-  .titles { min-width: 0; flex: 1; display: flex; flex-direction: column; }
-  .kind { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-  h1 { font-size: 1.15rem; margin: 0; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .download { font: inherit; font-size: 0.85rem; font-weight: 600; line-height: 1.3; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: var(--radius); padding: 0.35rem 0.75rem; background: var(--card); white-space: nowrap; cursor: pointer; }
-  .download:hover { border-color: var(--ember); color: var(--ember); }
-  .admin { font-size: 0.85rem; font-weight: 600; color: var(--ember); text-decoration: none; border: 1px solid var(--ember); border-radius: var(--radius); padding: 0.35rem 0.75rem; background: var(--ember-soft); white-space: nowrap; }
-  .admin:hover { background: var(--ember); color: var(--ember-fg); }
-  .size { color: var(--muted); font-weight: 400; margin-left: 0.3rem; }
+  .topbar { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 1rem; border-bottom: 1px solid var(--line); background: var(--card); }
+  .crumb { min-width: 0; margin: 0; font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .owner { color: var(--muted); font-weight: 400; }
+  .chip { flex: 0 0 auto; font-size: 0.75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0.05rem 0.55rem; white-space: nowrap; }
+  .spacer { flex: 1; }
+  .btn { font: inherit; font-size: 0.82rem; font-weight: 500; line-height: 1.3; color: var(--ink); text-decoration: none; border: 1px solid var(--line); border-radius: var(--radius); padding: 0.35rem 0.75rem; background: var(--card); white-space: nowrap; cursor: pointer; }
+  .btn:hover { border-color: var(--ember); color: var(--ember); }
+  .btn.primary { background: var(--ember); border-color: var(--ember); color: var(--ember-fg); }
+  .btn.primary:hover { filter: brightness(1.08); color: var(--ember-fg); }
   .menu { display: none; width: 34px; height: 34px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--card); flex-direction: column; justify-content: center; gap: 4px; align-items: center; cursor: pointer; }
   .menu span { width: 16px; height: 2px; background: var(--ink); border-radius: 2px; }
   .scrim { display: none; position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, 0.35); border: 0; }
-  .stage { flex: 1; position: relative; min-height: 0; background: var(--card); }
-  .frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; opacity: 0; transition: opacity 0.3s ease; }
+  .stage { flex: 1; position: relative; min-height: 0; background: var(--paper); }
+  .frame { position: absolute; inset: 0.9rem; width: calc(100% - 1.8rem); height: calc(100% - 1.8rem); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); background: #fff; opacity: 0; transition: opacity 0.3s ease; }
   .frame.ready { opacity: 1; }
   .image { height: 100%; display: grid; place-items: center; padding: 1.5rem; overflow: auto; }
   .image img { max-width: 100%; max-height: 100%; box-shadow: var(--shadow); border-radius: 6px; }
@@ -153,6 +150,8 @@
   @media (max-width: 800px) {
     .menu { display: flex; }
     .scrim { display: block; }
-    .topbar { padding: 0.7rem 0.9rem; }
+    .topbar { padding: 0.5rem 0.7rem; }
+    .chip { display: none; }
+    .frame { inset: 0.4rem; width: calc(100% - 0.8rem); height: calc(100% - 0.8rem); }
   }
 </style>

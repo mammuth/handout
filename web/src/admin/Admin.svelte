@@ -39,9 +39,9 @@
       <a href="/admin/activity" class:active={section === 'activity'} onclick={(e) => go(e, '/admin/activity')}>Activity</a>
       <a href="/admin/keys" class:active={section === 'keys'} onclick={(e) => go(e, '/admin/keys')}>API keys</a>
       <div class="who">
-        <strong>{session.owner.name}</strong>
-        <span class="mono">/s/{session.owner.slug}/</span>
-        <div style="margin-top:.5rem"><button class="btn small" onclick={out}>Sign out</button></div>
+        <span class="avatar">{session.owner.name.slice(0, 1).toUpperCase()}</span>
+        <div><strong>{session.owner.name}</strong><span class="mono">/s/{session.owner.slug}/</span></div>
+        <button class="btn small" onclick={out}>Sign out</button>
       </div>
     </nav>
     <main>

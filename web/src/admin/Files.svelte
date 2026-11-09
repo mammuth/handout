@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api } from './auth.svelte';
-  import { formatDate, formatSize, kindLabel } from '../lib/api';
+  import { formatDate, formatSize } from '../lib/api';
+  import KindIcon from '../KindIcon.svelte';
   import type { ApiError } from '../lib/types';
   import type { FileSummary } from './types';
   import FileDetail from './FileDetail.svelte';
@@ -53,7 +54,7 @@
   }
 </script>
 
-<h1>Files</h1>
+<h1>Files <span class="muted small">{files.length} {files.length === 1 ? 'file' : 'files'}</span></h1>
 <div class="split">
   <div class="stack">
     <form class="card" onsubmit={upload}>
@@ -78,23 +79,17 @@
       {#if error}<p class="error">{error}</p>{/if}
     </form>
 
-    <div class="row">
-      <input class="input grow" placeholder="Search title or id…" bind:value={q} />
-      <span class="muted small">{files.length} {files.length === 1 ? 'file' : 'files'}</span>
-    </div>
+    <input class="input" placeholder="Search title or id…" bind:value={q} />
 
     {#if files.length}
-      <table class="list">
-        <thead><tr><th>Title</th><th>Kind</th><th>Access</th><th>Updated</th><th></th></tr></thead>
+      <div class="tbl"><table class="list">
+        <thead><tr><th>Name</th><th>Access</th><th>Updated</th><th></th></tr></thead>
         <tbody>
           {#each files as f (f.id)}
             <tr class="click" class:selected={f.id === selected} onclick={() => navigate(`/admin/files/${f.id}`)}>
-              <td><strong>{f.title}</strong><div class="muted small mono">{f.id}{f.version > 1 ? ` · v${f.version}` : ''}</div></td>
-              <td>{kindLabel[f.kind]}</td>
+              <td><div class="fc"><KindIcon kind={f.kind} /><div><strong>{f.title}</strong><div class="muted small mono">{f.id}{f.version > 1 ? ` · v${f.version}` : ''}</div></div></div></td>
               <td>
-                {#if f.access === 'off'}<span class="badge off">off</span>
-                {:else if f.access === 'recipients'}<span class="badge ember">recipients</span>
-                {:else}<span class="badge">link</span>{/if}
+                <span class="status {f.access}">{f.access === 'off' ? 'Off' : f.access === 'recipients' ? 'Recipients' : 'Link'}</span>
                 {#if f.has_password}<span class="badge">password</span>{/if}
                 {#if f.email_gate}<span class="badge">email</span>{/if}
                 {#if f.expires_at}<span class="badge">expires</span>{/if}
@@ -104,7 +99,7 @@
             </tr>
           {/each}
         </tbody>
-      </table>
+      </table></div>
     {:else}
       <p class="empty">No files yet. Upload one above, or let an agent do it over MCP.</p>
     {/if}

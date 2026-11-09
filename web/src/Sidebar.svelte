@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Brand from './Brand.svelte';
+  import KindIcon from './KindIcon.svelte';
   import { formatDate, kindLabel } from './lib/api';
   import type { SidebarEntry } from './lib/types';
 
@@ -21,6 +21,9 @@
 
   const newCount = $derived(entries.filter((e) => e.is_new && e.id !== currentId).length);
 
+  const initials = (name: string) =>
+    name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+
   function go(e: MouseEvent, to: string) {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
     e.preventDefault();
@@ -31,14 +34,17 @@
 
 <aside class:open>
   <header>
-    <Brand {ownerName} />
-    <p class="for">Shared with <strong>{recipient.name}</strong></p>
+    <span class="avatar">{initials(ownerName)}</span>
+    <div class="who">
+      <strong>{ownerName}</strong>
+      <span>Shared with {recipient.name}</span>
+    </div>
   </header>
 
   {#if entries.length}
     <p class="section">
-      {entries.length} {entries.length === 1 ? 'file' : 'files'}
-      {#if newCount}<span class="count">{newCount} new</span>{/if}
+      <span>Shared with you</span>
+      {#if newCount}<span class="count">{newCount} new</span>{:else}<span>{entries.length}</span>{/if}
     </p>
     <nav>
       {#each entries as e, i (e.id)}
@@ -49,12 +55,12 @@
           style="--i: {i}"
           onclick={(ev) => go(ev, e.link)}
         >
-          <span class="kind">{kindLabel[e.kind] ?? 'File'}</span>
-          <span class="title">{e.title}</span>
-          <span class="meta">
-            {formatDate(e.updated_at)}
-            {#if e.is_new && e.id !== currentId}<span class="badge">new</span>{/if}
+          <KindIcon kind={e.kind} />
+          <span class="text">
+            <span class="title">{e.title}</span>
+            <span class="meta">{kindLabel[e.kind] ?? 'File'} · {formatDate(e.updated_at)}</span>
           </span>
+          {#if e.is_new && e.id !== currentId}<span class="badge">New</span>{/if}
         </a>
       {/each}
     </nav>
@@ -62,56 +68,50 @@
     <p class="hint">Nothing else has been shared with you yet.</p>
   {/if}
 
-  <footer><img class="mark" src="/favicon.svg" alt="" />handout</footer>
+  <footer><img class="mark" src="/favicon.svg" alt="" />Powered by handout</footer>
 </aside>
 
 <style>
   aside {
-    /* dark teal rail: remap the page tokens so nested components (Brand) read on it */
-    --ink: var(--rail-ink);
-    --ink-2: var(--rail-ink);
-    --muted: var(--rail-muted);
-    --line: var(--rail-line);
-    --ember: var(--rail-accent);
-    --ember-soft: color-mix(in oklab, var(--rail-accent) 25%, transparent);
     width: var(--sidebar-w);
     flex: 0 0 auto;
     height: 100%;
     overflow-y: auto;
-    padding: 1rem 0.6rem 0.8rem;
-    border-right: 1px solid var(--line);
+    padding: 0.8rem 0.5rem 0.6rem;
     background: var(--rail);
-    color: var(--ink);
+    color: var(--rail-ink);
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.1rem;
   }
-  header { margin-bottom: 0.4rem; padding: 0 0.5rem; }
-  .for { margin: 0.45rem 0 0; color: var(--ink-2); font-size: 0.88rem; }
-  .section { margin: 0.6rem 0 0.2rem; padding: 0 0.5rem; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
-  .count { color: var(--rail-accent); font-weight: 700; }
+  header { display: flex; align-items: center; gap: 0.6rem; padding: 0.3rem 0.5rem 0.9rem; }
+  .avatar { width: 32px; height: 32px; flex: 0 0 auto; border-radius: 50%; display: grid; place-content: center; background: var(--ember); color: var(--ember-fg); font-weight: 700; font-size: 0.8rem; }
+  .who { min-width: 0; display: flex; flex-direction: column; }
+  .who strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who span { font-size: 0.78rem; color: var(--rail-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .section { margin: 0.2rem 0 0.25rem; padding: 0 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--rail-muted); display: flex; justify-content: space-between; }
+  .count { color: var(--rail-accent); }
   nav { display: flex; flex-direction: column; gap: 0.1rem; }
   nav a {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.05rem;
-    padding: 0.45rem 0.55rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.5rem;
     border-radius: var(--radius);
-    color: var(--ink);
+    color: var(--rail-ink);
     text-decoration: none;
     animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
     animation-delay: calc(var(--i) * 45ms);
   }
-  nav a:hover { background: var(--rail-active); }
-  nav a.current { background: var(--rail-active); box-shadow: inset 2px 0 0 var(--rail-accent); }
-  nav a.new .title { font-weight: 700; }
-  .kind { font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-  .title { font-size: 0.93rem; line-height: 1.25; }
-  .meta { font-size: 0.75rem; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; }
-  .badge { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--rail-accent-fg); background: var(--rail-accent); padding: 0.05rem 0.4rem; border-radius: 999px; }
-  .hint { color: var(--muted); font-size: 0.88rem; line-height: 1.4; padding: 0 0.5rem; }
-  footer { display: flex; align-items: center; gap: 0.4rem; margin-top: auto; padding: 0.8rem 0.5rem 0; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-  footer .mark { width: 18px; height: 18px; }
+  nav a:hover, nav a.current { background: var(--rail-active); }
+  nav a.current .title, nav a.new .title { font-weight: 600; }
+  .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .title { font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { font-size: 0.75rem; color: var(--rail-muted); }
+  .badge { flex: 0 0 auto; font-size: 0.7rem; font-weight: 600; color: var(--rail-accent-fg); background: var(--rail-accent); padding: 0.05rem 0.5rem; border-radius: 999px; }
+  .hint { color: var(--rail-muted); font-size: 0.85rem; line-height: 1.4; padding: 0 0.5rem; }
+  footer { display: flex; align-items: center; gap: 0.4rem; margin-top: auto; padding: 0.7rem 0.5rem 0.2rem; font-size: 0.75rem; color: var(--rail-muted); }
+  footer .mark { width: 16px; height: 16px; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @media (max-width: 800px) {
     aside {

@@ -14,12 +14,14 @@
 .admin nav.side a { display: block; padding: 0.4rem 0.6rem; border-radius: var(--radius); color: var(--ink-2); text-decoration: none; font-weight: 500; }
 .admin nav.side a:hover { background: var(--card); }
 .admin nav.side a.active { background: var(--card); color: var(--ink); box-shadow: inset 2px 0 0 var(--rail-accent); }
-.admin nav.side .who { margin-top: auto; font-size: 0.82rem; color: var(--muted); padding: 0.5rem 0.6rem; }
-.admin nav.side .who strong { display: block; color: var(--ink); }
-.admin nav.side .who .btn { background: transparent; }
+.admin nav.side .who { margin-top: auto; display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 0.55rem; align-items: center; font-size: 0.78rem; color: var(--muted); padding: 0.5rem 0.4rem; }
+.admin nav.side .who strong { display: block; color: var(--ink); font-size: 0.85rem; }
+.admin nav.side .who .avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-content: center; background: var(--rail-accent); color: var(--rail-accent-fg); font-weight: 700; }
+.admin nav.side .who .btn { grid-column: 1 / -1; background: transparent; }
 .admin nav.side .who .btn:hover { border-color: var(--rail-accent); color: var(--rail-accent); }
 .admin main { flex: 1; min-width: 0; padding: 1.2rem 1.4rem 3rem; }
-.admin h1 { font-size: 1.4rem; letter-spacing: -0.02em; margin: 0 0 0.9rem; }
+.admin h1 { font-size: 1.4rem; letter-spacing: -0.02em; margin: 0 0 0.9rem; display: flex; align-items: baseline; gap: 0.6rem; }
+.admin h1 .small { font-weight: 400; letter-spacing: 0; }
 .admin h2 { font-size: 1rem; letter-spacing: -0.01em; margin: 1.1rem 0 0.5rem; }
 .admin h3 { font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 1rem 0 0.4rem; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.9rem 1rem; box-shadow: var(--shadow); }
@@ -45,11 +47,19 @@ label.check { display: flex; gap: 0.5rem; align-items: center; margin: 0.6rem 0 
 .badge.ember { background: var(--ember-soft); color: var(--ember); border-color: transparent; }
 .badge.new { background: var(--new-soft); color: var(--new); border-color: transparent; }
 .badge.off { background: #fee2e2; color: #b91c1c; border-color: transparent; }
-table.list { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-table.list th { text-align: left; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 0.35rem 0.55rem; border-bottom: 1px solid var(--line); }
-table.list td { padding: 0.45rem 0.55rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+table.list { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.list th { text-align: left; font-size: 0.75rem; font-weight: 500; color: var(--muted); padding: 0.45rem 0.65rem; background: var(--paper-2); border-bottom: 1px solid var(--line); }
+table.list td { padding: 0.45rem 0.65rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.list tr:last-child td { border-bottom: 0; }
+table.list .fc { display: flex; align-items: center; gap: 0.6rem; }
+table.list .fc strong { font-weight: 500; }
+.status { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; margin-right: 0.3rem; }
+.status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+.status.recipients::before { background: #f59e0b; }
+.status.off::before { background: #a1a1aa; }
 table.list tr.click { cursor: pointer; }
-table.list tr.click:hover td { background: var(--card); }
+table.list tr.click:hover td { background: var(--paper); }
 table.list tr.selected td { background: var(--ember-soft); }
 .linkbox { display: flex; gap: 0.4rem; align-items: center; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.3rem 0.3rem 0.3rem 0.6rem; }
 .linkbox code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; }
