@@ -80,13 +80,18 @@ impl Service<Request> for HostRouter {
     }
 }
 
+/// Shell CSP. `form_action` is appended to `'self'`; browsers also enforce it on the redirect after a
+/// form POST, so the OAuth consent page must list the client's redirect origin.
+pub fn shell_csp(content_url: &str, form_action: &str) -> String {
+    format!(
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; \
+         font-src 'self'; connect-src 'self'; frame-src {content_url}; base-uri 'self'; form-action 'self'{form_action}; frame-ancestors 'none'"
+    )
+}
+
 pub fn build_app(state: AppState) -> HostRouter {
     let cfg = state.cfg.clone();
-    let shell_csp = format!(
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; \
-         font-src 'self'; connect-src 'self'; frame-src {}; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
-        cfg.content_url
-    );
+    let shell_csp = shell_csp(&cfg.content_url, "");
     let shell = Router::new()
         .merge(shell::router())
         .merge(view::router())

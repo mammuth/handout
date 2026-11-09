@@ -700,6 +700,11 @@ async fn oauth_flow() {
     // consent page
     let res = b.get(app.url(&authz)).send().await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
+    let csp = res.headers()[header::CONTENT_SECURITY_POLICY].to_str().unwrap();
+    assert!(
+        csp.contains("form-action 'self' http://localhost:9999;"),
+        "{csp}"
+    );
     let page = res.text().await.unwrap();
     assert!(page.contains("Claude") && page.contains("Allow"), "{page}");
 

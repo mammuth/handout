@@ -327,7 +327,32 @@ async fn authorize_get(
         client = escape(&client.client_name),
         qs = p.query_string(),
     );
-    page("Authorize", &body)
+    let mut res = page("Authorize", &body);
+    if let Some(src) = csp_source(&p.redirect_uri) {
+        let csp = crate::app::shell_csp(&st.cfg.content_url, &format!(" {src}"));
+        if let Ok(v) = HeaderValue::from_str(&csp) {
+            res.headers_mut().insert(header::CONTENT_SECURITY_POLICY, v);
+        }
+    }
+    res
+}
+
+/// CSP source for a redirect URI: `scheme://host[:port]` for http(s), `scheme:` for native-app schemes.
+/// Anything that could smuggle extra CSP tokens yields `None`.
+fn csp_source(uri: &str) -> Option<String> {
+    let (scheme, rest) = uri.split_once(':')?;
+    let scheme_ok = scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+        && scheme.chars().all(|c| c.is_ascii_alphanumeric() || "+-.".contains(c));
+    if !scheme_ok {
+        return None;
+    }
+    if scheme != "http" && scheme != "https" {
+        return Some(format!("{scheme}:"));
+    }
+    let authority = rest.strip_prefix("//")?.split(['/', '?', '#']).next()?;
+    let authority_ok = !authority.is_empty()
+        && authority.chars().all(|c| c.is_ascii_alphanumeric() || "-.:[]".contains(c));
+    authority_ok.then(|| format!("{scheme}://{authority}"))
 }
 
 #[derive(Deserialize)]
