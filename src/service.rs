@@ -1,5 +1,7 @@
 //! Business logic shared by the REST API and the MCP tools. Everything here is owner-scoped.
 
+use std::time::{Duration, SystemTime};
+
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -683,6 +685,8 @@ pub async fn list_files(
     Ok(out)
 }
 
+/// Soft-deletes the row (its opens stay in the activity history) and drops the bytes: every blob only
+/// this file's versions referenced is removed right away.
 pub async fn delete_file(st: &AppState, owner: &Owner, public_id: &str) -> ApiResult<()> {
     let file = load_file(st, owner.id, public_id).await?;
     sqlx::query("UPDATE files SET deleted_at = ?, access = 'off', updated_at = ? WHERE id = ?")
@@ -691,7 +695,62 @@ pub async fn delete_file(st: &AppState, owner: &Owner, public_id: &str) -> ApiRe
         .bind(file.id)
         .execute(&st.db)
         .await?;
+    let blobs: Vec<String> =
+        sqlx::query_scalar("SELECT DISTINCT blob_sha256 FROM file_versions WHERE file_id = ?")
+            .bind(file.id)
+            .fetch_all(&st.db)
+            .await?;
+    gc_blobs(st, blobs).await?;
     Ok(())
+}
+
+// ---------- blob garbage collection ----------
+
+/// Blobs younger than this are never swept: an upload writes its blob before the version row.
+pub const BLOB_SWEEP_GRACE: Duration = Duration::from_secs(3600);
+const BLOB_SWEEP_EVERY: Duration = Duration::from_secs(24 * 3600);
+
+/// Remove each candidate blob that no version of a live (non-deleted) file references; returns how
+/// many went. A byte-identical upload racing the delete of the only other holder can lose its blob —
+/// accepted for a single-binary tool.
+pub async fn gc_blobs(st: &AppState, candidates: Vec<String>) -> ApiResult<usize> {
+    let mut removed = 0;
+    for sha in candidates {
+        let live: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM file_versions v JOIN files f ON f.id = v.file_id \
+             WHERE v.blob_sha256 = ? AND f.deleted_at IS NULL",
+        )
+        .bind(&sha)
+        .fetch_one(&st.db)
+        .await?;
+        if live == 0 {
+            st.blobs.remove(&sha).await?;
+            removed += 1;
+        }
+    }
+    Ok(removed)
+}
+
+/// Orphan sweep: blobs left by aborted uploads, crashes or cascading owner deletes, plus stale temp
+/// files. Only looks at blobs older than `grace`. Returns the number of blobs removed.
+pub async fn sweep_blobs(st: &AppState, grace: Duration) -> ApiResult<usize> {
+    let cutoff = SystemTime::now() - grace;
+    st.blobs.prune_tmp(cutoff).await?;
+    let candidates = st.blobs.stale(cutoff).await?;
+    gc_blobs(st, candidates).await
+}
+
+/// Sweeps at startup and then once a day. Spawned by `serve`.
+pub async fn blob_sweep_loop(st: AppState) {
+    let mut tick = tokio::time::interval(BLOB_SWEEP_EVERY);
+    loop {
+        tick.tick().await;
+        match sweep_blobs(&st, BLOB_SWEEP_GRACE).await {
+            Ok(0) => {}
+            Ok(n) => tracing::info!(removed = n, "blob sweep"),
+            Err(e) => tracing::warn!(error = %e, "blob sweep failed"),
+        }
+    }
 }
 
 // ---------- recipients ----------

@@ -71,7 +71,7 @@ Identifiers:
 - recipient `id` = uuid v4 (stable API id). Recipient token = 22 chars base58 (~128 bits), stored plain so `share_file` can always return a recipient link; rotatable.
 - API key = `hk_` + 32 chars base58, same storage scheme.
 - OAuth codes / tokens = 32 chars base58, stored hashed.
-- Blob dedupe by sha256. v1 never deletes blobs (history is kept); a `gc` command can come later.
+- Blob dedupe by sha256. History of live files is kept. Deleting a file removes every blob only its versions referenced, right away; a daily in-process sweep (1 h grace by mtime) removes orphans left by aborted uploads, crashes or cascading owner deletes, plus stale temp files.
 
 ## URL scheme
 

@@ -59,4 +59,5 @@ cd web && npm run check                 # svelte-check
 - Cookies: `__Host-` prefix when `PUBLIC_URL` is https; plain names in http dev.
 - Every raw response on the content host carries `Content-Security-Policy: sandbox …; frame-ancestors {PUBLIC_ORIGIN}` and `X-Content-Type-Options: nosniff`.
 - Every response on both hosts carries `X-Robots-Tag: noindex, nofollow, noarchive` and defaults to `Cache-Control: no-store` (layers in `app.rs`); a handler that wants caching sets its own header.
+- Deleting a file drops its blobs at once; `service::blob_sweep_loop` removes orphans daily. Never rely on a blob outliving its last live version.
 - No external requests from the shell (fonts bundled).

@@ -1500,3 +1500,87 @@ async fn fetching_a_link_is_not_being_seen() {
     assert_eq!(res.status(), StatusCode::OK);
     assert!(last_seen(&app, &ann).await.is_string());
 }
+
+#[tokio::test]
+async fn blob_garbage_collection() {
+    use std::time::{Duration, SystemTime};
+    let app = spawn().await;
+    let blob_path = |content: &str| {
+        app.state
+            .blobs
+            .path(&handout::ids::sha256_hex(content.as_bytes()))
+    };
+
+    // two files with the same bytes share one blob; a second version of A adds another
+    let a = app
+        .upload_json("A", "a.html", "<p>same</p>", json!({}))
+        .await;
+    let b = app
+        .upload_json("B", "b.html", "<p>same</p>", json!({}))
+        .await;
+    let a_id = a["id"].as_str().unwrap().to_string();
+    let b_id = b["id"].as_str().unwrap().to_string();
+    let shared = blob_path("<p>same</p>");
+    assert!(shared.exists());
+    let res = app
+        .api()
+        .put(app.url(&format!("/api/files/{a_id}/content")))
+        .json(&json!({ "filename": "a.html", "content": "<p>v2</p>" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(
+        res.status(),
+        StatusCode::OK,
+        "{}",
+        res.text().await.unwrap()
+    );
+    let v2 = blob_path("<p>v2</p>");
+    assert!(v2.exists());
+
+    // deleting A drops every blob only A used; the shared one stays for B
+    let res = app
+        .api()
+        .delete(app.url(&format!("/api/files/{a_id}")))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::NO_CONTENT);
+    assert!(!v2.exists(), "A's own version is gone");
+    assert!(shared.exists(), "B still needs it");
+    let res = app
+        .api()
+        .delete(app.url(&format!("/api/files/{b_id}")))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::NO_CONTENT);
+    assert!(!shared.exists(), "last reference gone");
+
+    // sweep: an orphan blob and a stale temp file go once past the grace period; a live blob of the
+    // same age stays
+    app.upload_json("C", "c.html", "<p>live</p>", json!({}))
+        .await;
+    let live = blob_path("<p>live</p>");
+    let orphan = app.state.blobs.path(&"ab".repeat(32));
+    std::fs::create_dir_all(orphan.parent().unwrap()).unwrap();
+    std::fs::write(&orphan, b"x").unwrap();
+    let tmp = app.state.cfg.blob_dir().join("tmp").join("leftover");
+    std::fs::write(&tmp, b"x").unwrap();
+    let grace = Duration::from_secs(3600);
+    assert_eq!(service::sweep_blobs(&app.state, grace).await.unwrap(), 0);
+    assert!(orphan.exists() && tmp.exists(), "too fresh to touch");
+    let old = SystemTime::now() - 2 * grace;
+    for p in [&orphan, &tmp, &live] {
+        std::fs::File::options()
+            .write(true)
+            .open(p)
+            .unwrap()
+            .set_modified(old)
+            .unwrap();
+    }
+    assert_eq!(service::sweep_blobs(&app.state, grace).await.unwrap(), 1);
+    assert!(!orphan.exists());
+    assert!(!tmp.exists());
+    assert!(live.exists());
+}

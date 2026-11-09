@@ -78,6 +78,7 @@ async fn main() -> Result<()> {
                 .await
                 .with_context(|| format!("bind {}", cfg.listen))?;
             tracing::info!(listen = %cfg.listen, public = %cfg.public_url, content = %cfg.content_url, "handout listening");
+            tokio::spawn(service::blob_sweep_loop(state.clone()));
             app::serve(state, listener, async {
                 let _ = tokio::signal::ctrl_c().await;
                 tracing::info!("shutting down");
