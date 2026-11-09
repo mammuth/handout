@@ -1427,3 +1427,76 @@ async fn crawlers_and_caches() {
     assert_eq!(res.status(), StatusCode::OK);
     assert!(res.text().await.unwrap().contains("User-agent: *"));
 }
+
+#[tokio::test]
+async fn fetching_a_link_is_not_being_seen() {
+    let app = spawn().await;
+    let f = app
+        .upload_json("Doc", "doc.html", "<h1>hi</h1>", json!({}))
+        .await;
+    let file_id = f["id"].as_str().unwrap().to_string();
+    async fn share(app: &App, file_id: &str, name: &str, email: &str) -> (String, String) {
+        let s: Value = app
+            .api()
+            .post(app.url(&format!("/api/files/{file_id}/share")))
+            .json(&json!({ "name": name, "email": email }))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        (
+            s["recipient"]["id"].as_str().unwrap().to_string(),
+            s["recipient_link"].as_str().unwrap().to_string(),
+        )
+    }
+    async fn last_seen(app: &App, id: &str) -> Value {
+        let r: Value = app
+            .api()
+            .get(app.url(&format!("/api/recipients/{id}")))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        r["last_seen_at"].clone()
+    }
+
+    // a link previewer or mail scanner fetches the recipient link: cookie issued, nothing recorded
+    let (jon, link) = share(&app, &file_id, "Jon Doe", "jon@acme.com").await;
+    let bot = no_redirect_browser();
+    let res = bot.get(&link).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::SEE_OTHER);
+    assert!(
+        last_seen(&app, &jon).await.is_null(),
+        "a fetch is not a visit"
+    );
+
+    // the SPA calling the viewer API is a real page load
+    let (st, v) = app.view(&bot, &file_id).await;
+    assert_eq!(st, StatusCode::OK);
+    assert_eq!(v["state"], "ok");
+    assert_eq!(
+        v["recipient"]["name"], "Jon Doe",
+        "cookie from the 303 kept"
+    );
+    let seen = last_seen(&app, &jon).await;
+    assert!(seen.is_string(), "{seen}");
+
+    // same for the recipient's home page
+    let (ann, link) = share(&app, &file_id, "Ann", "ann@acme.com").await;
+    let token = link.rsplit("?r=").next().unwrap().to_string();
+    let bot = no_redirect_browser();
+    let res = bot
+        .get(app.url(&format!("/s/max?r={token}")))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::SEE_OTHER);
+    assert!(last_seen(&app, &ann).await.is_null());
+    let res = bot.get(app.url("/api/view/max")).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert!(last_seen(&app, &ann).await.is_string());
+}

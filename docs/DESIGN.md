@@ -106,7 +106,7 @@ Content host:
 
 ## Viewer flow
 
-1. `GET /s/max/proposal-7xKq2mNp4R?r=TOKEN`. Server validates the token belongs to a recipient of owner `max`; sets cookie `__Host-hr=TOKEN` (HttpOnly, Secure, SameSite=Lax, Path=/, 1 year), updates `last_seen_at`, 302 → clean URL. Invalid token → dropped silently.
+1. `GET /s/max/proposal-7xKq2mNp4R?r=TOKEN`. Server validates the token belongs to a recipient of owner `max`; sets cookie `__Host-hr=TOKEN` (HttpOnly, Secure, SameSite=Lax, Path=/, 1 year), 303 → clean URL. Invalid token → dropped silently. Nothing is recorded here: link previewers and mail scanners fetch recipient links too. `last_seen_at` is set by the viewer API, which only a real page load calls.
 2. SPA boots, calls `GET /api/view/max/proposal-7xKq2mNp4R`. Response:
    ```json
    { "owner": {"slug":"max","name":"Max"},

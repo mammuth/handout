@@ -45,6 +45,8 @@ struct EntryQuery {
 }
 
 /// `?r={token}` → set recipient cookie, redirect to the clean URL. Otherwise serve the SPA.
+/// Link previewers and mail scanners fetch this too, so nothing here counts as the recipient being
+/// seen; the viewer API does that, and only a real page load calls it.
 async fn viewer_entry(
     State(st): State<AppState>,
     Path((owner_slug, file_id)): Path<(String, String)>,
@@ -95,19 +97,12 @@ async fn login_and_redirect(
         _ => None,
     };
     let jar = match recipient {
-        Some(r) => {
-            let _ = sqlx::query("UPDATE recipients SET last_seen_at = ? WHERE id = ?")
-                .bind(db::now())
-                .bind(&r.id)
-                .execute(&st.db)
-                .await;
-            jar.add(auth::cookie(
-                &st.cfg,
-                RECIPIENT_COOKIE,
-                r.token.clone(),
-                Some(RECIPIENT_TTL),
-            ))
-        }
+        Some(r) => jar.add(auth::cookie(
+            &st.cfg,
+            RECIPIENT_COOKIE,
+            r.token.clone(),
+            Some(RECIPIENT_TTL),
+        )),
         None => jar,
     };
     (jar, Redirect::to(clean)).into_response()
@@ -333,6 +328,16 @@ async fn is_invited(st: &AppState, file_id: i64, recipient_id: &str) -> ApiResul
     Ok(n > 0)
 }
 
+/// A real page load by this recipient: the SPA calling the viewer API, not something fetching a link.
+async fn touch_seen(st: &AppState, recipient_id: &str) -> ApiResult<()> {
+    sqlx::query("UPDATE recipients SET last_seen_at = ? WHERE id = ?")
+        .bind(db::now())
+        .bind(recipient_id)
+        .execute(&st.db)
+        .await?;
+    Ok(())
+}
+
 async fn view_file(
     State(st): State<AppState>,
     Path((owner_slug, file_id)): Path<(String, String)>,
@@ -377,22 +382,20 @@ async fn view_file(
             .await?
             .last_insert_rowid();
         open = Some(json!({ "id": open_id, "token": open_token(&st, open_id) }));
-        if let Some(r) = &recipient {
-            if invited {
-                sqlx::query("UPDATE invites SET last_opened_at = ?, last_opened_version = ? WHERE file_id = ? AND recipient_id = ?")
-                    .bind(now)
-                    .bind(latest.number)
-                    .bind(file.id)
-                    .bind(&r.id)
-                    .execute(&st.db)
-                    .await?;
-            }
-            sqlx::query("UPDATE recipients SET last_seen_at = ? WHERE id = ?")
+        if let Some(r) = &recipient
+            && invited
+        {
+            sqlx::query("UPDATE invites SET last_opened_at = ?, last_opened_version = ? WHERE file_id = ? AND recipient_id = ?")
                 .bind(now)
+                .bind(latest.number)
+                .bind(file.id)
                 .bind(&r.id)
                 .execute(&st.db)
                 .await?;
         }
+    }
+    if let Some(r) = &recipient {
+        touch_seen(&st, &r.id).await?;
     }
     let sidebar = match &recipient {
         Some(r) => sidebar(&st, &owner, r).await?,
@@ -487,6 +490,7 @@ async fn view_home(
     let recipient = current_recipient(&st, owner.id, &jar)
         .await
         .ok_or(AppError::Forbidden)?;
+    touch_seen(&st, &recipient.id).await?;
     let files = sidebar(&st, &owner, &recipient).await?;
     Ok(Json(json!({
         "owner": { "slug": owner.slug, "name": owner.name },
