@@ -25,6 +25,7 @@ use crate::{
     error::{ApiResult, AppError},
     models::{Access, Owner},
     service::{self, FileMeta, Patch, ShareTarget, Upload},
+    upload::{self, TicketMeta},
 };
 
 pub fn router(state: AppState) -> Router<AppState> {
@@ -124,6 +125,14 @@ pub struct UpdateFileParams {
     pub content: Option<String>,
     pub content_base64: Option<String>,
     pub mime: Option<String>,
+}
+
+#[derive(Deserialize, schemars::JsonSchema)]
+pub struct CreateUploadParams {
+    /// Existing file id: the upload becomes a new version of it. Omit to create a new file.
+    pub file_id: Option<String>,
+    #[serde(flatten)]
+    pub meta: TicketMeta,
 }
 
 #[derive(Deserialize, schemars::JsonSchema)]
@@ -264,6 +273,22 @@ impl HandoutMcp {
         }
         .await;
         result(r)
+    }
+
+    #[tool(
+        description = "Mint a one-time upload URL for large or binary files, so the bytes never pass through a tool call. \
+            Run the returned `curl` command (`curl --fail-with-body -T <local path> '<upload_url>'`) from a shell within 10 minutes; \
+            the URL works once and needs no other credentials. The PUT response is the file JSON (id, file_link). \
+            With `file_id` the upload becomes a new version of that file; otherwise a new file is created with the given settings. \
+            Set a password afterwards with set_file."
+    )]
+    async fn create_upload(
+        &self,
+        Parameters(p): Parameters<CreateUploadParams>,
+        ctx: RequestContext<RoleServer>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let owner = owner_of(&ctx)?;
+        result(upload::create_ticket(&self.st, &owner, p.file_id.as_deref(), p.meta).await)
     }
 
     #[tool(
@@ -525,7 +550,7 @@ impl ServerHandler for HandoutMcp {
         info.server_info = server_info;
         info.instructions = Some(
             "handout shares files (HTML, Markdown, PDF, images) with recipients via links. \
-             Typical flow: upload_file → share_file(file_id, name/email) → send the returned recipient_link. \
+             Typical flow: upload_file (or create_upload + curl for large/binary files) → share_file(file_id, name/email) → send the returned recipient_link. \
              A recipient keeps one identity: every file shared with them appears in their sidebar. \
              Use update_file to publish a new version under the same links, list_opens to see who opened what."
                 .into(),

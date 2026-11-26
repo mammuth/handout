@@ -49,5 +49,8 @@ curl -H "Authorization: Bearer hk_…" -H 'content-type: application/json' \
 
 Endpoint: `{PUBLIC_URL}/mcp` (Streamable HTTP). Auth: OAuth (claude.ai, Claude Code `claude mcp add --transport http handout https://…/mcp`) or `Authorization: Bearer hk_…`.
 
-Tools: `upload_file`, `update_file`, `set_file`, `list_files`, `get_file`, `delete_file`,
+Tools: `upload_file`, `create_upload`, `update_file`, `set_file`, `list_files`, `get_file`, `delete_file`,
 `find_recipients`, `create_recipient`, `share_file`, `revoke_invite`, `list_opens`, `whoami`.
+
+Large or binary files: `create_upload` returns a one-time URL (10 min); upload from a shell with
+`curl --fail-with-body -T file.html '<upload_url>'`. No bytes go through the model, no long-lived key in the sandbox.

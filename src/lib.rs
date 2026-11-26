@@ -18,6 +18,7 @@ pub mod pdf;
 pub mod ratelimit;
 pub mod service;
 pub mod shell;
+pub mod upload;
 pub mod view;
 pub mod webauth;
 

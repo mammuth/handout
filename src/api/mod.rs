@@ -17,6 +17,7 @@ use crate::{
     error::{ApiResult, AppError},
     models::Access,
     service::{self, FileMeta, Patch, ShareTarget, Upload},
+    upload::{self, TicketMeta},
 };
 
 pub fn router() -> Router<AppState> {
@@ -39,6 +40,7 @@ pub fn router() -> Router<AppState> {
                 .delete(delete_recipient),
         )
         .route("/recipients/{id}/rotate-token", post(rotate_token))
+        .route("/uploads", post(create_upload))
         .route("/opens", get(list_opens))
         .route("/keys", get(list_keys).post(create_key))
         .route("/keys/{id}", delete(revoke_key))
@@ -214,6 +216,24 @@ async fn put_content(
     Ok(Json(json!(
         service::add_version(&st, &owner, &id, upload).await?
     )))
+}
+
+#[derive(Deserialize)]
+struct CreateUpload {
+    /// Set to add a version to this file instead of creating one.
+    file_id: Option<String>,
+    #[serde(flatten)]
+    meta: TicketMeta,
+}
+
+/// One-time upload URL: `PUT` the raw bytes to `upload_url` within 10 minutes, no bearer needed.
+async fn create_upload(
+    State(st): State<AppState>,
+    OwnerAuth(owner): OwnerAuth,
+    Json(body): Json<CreateUpload>,
+) -> ApiResult<(StatusCode, Json<Value>)> {
+    let t = upload::create_ticket(&st, &owner, body.file_id.as_deref(), body.meta).await?;
+    Ok((StatusCode::CREATED, Json(json!(t))))
 }
 
 async fn get_file(

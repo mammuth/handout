@@ -152,16 +152,24 @@ PATCH  /api/recipients/{id}
 POST   /api/recipients/{id}/rotate-token
 DELETE /api/recipients/{id}
 GET    /api/opens?file_id=&recipient_id=&since=
+POST   /api/uploads               {file_id?, filename?, mime?, title?, slug?, access?, email_gate?, expires_at?} → one-time upload URL
 GET    /api/keys  POST /api/keys  DELETE /api/keys/{id}
 ```
+
+Upload URLs: `PUT {PUBLIC_URL}/upload/{token}` with the raw bytes as body (`curl -T`), no other auth. Minted by
+`POST /api/uploads` or MCP `create_upload`; valid 10 min, spent on the first PUT (even a failed one), token stored
+sha256-hashed in `upload_tickets`. Without `file_id` the PUT creates a file (201 + file JSON), with it a new
+version (200). Kind comes from the ticket's `filename`/`mime`; the request's Content-Type is ignored (curl's
+`--data-binary` sends a form type). Same `HANDOUT_MAX_UPLOAD_MB` cap, enforced while streaming. No password on
+the ticket (it would sit in plain text): set it with `set_file` afterwards.
 
 Lookup by email is owner-scoped and case-insensitive. `find` for `share` by name is exact-insensitive match first, then substring; ambiguity returns 409 with candidates.
 
 ## MCP tools
 
-Same semantics as the API, one tool per verb. Text content (html/md) passed as `content`; binary as `content_base64`.
+Same semantics as the API, one tool per verb. Text content (html/md) passed as `content`; binary as `content_base64`; large or binary files via `create_upload` + `curl -T` (see upload URLs above).
 
-`whoami`, `upload_file`, `update_file`, `set_file`, `list_files`, `get_file`, `delete_file`,
+`whoami`, `upload_file`, `create_upload`, `update_file`, `set_file`, `list_files`, `get_file`, `delete_file`,
 `find_recipients`, `create_recipient`, `update_recipient`, `rotate_recipient_token`,
 `share_file` (file + recipient_id | name/email → recipient link), `revoke_invite`, `list_opens`.
 

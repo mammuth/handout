@@ -996,6 +996,7 @@ async fn mcp_tools() {
     for expected in [
         "whoami",
         "upload_file",
+        "create_upload",
         "update_file",
         "set_file",
         "list_files",
@@ -1032,6 +1033,28 @@ async fn mcp_tools() {
     assert!(!err, "{file}");
     let file_id = file["id"].as_str().unwrap().to_string();
     assert!(file_id.starts_with("deck-"));
+
+    // create_upload: mint via MCP, PUT the bytes from outside the tool call
+    let (err, ticket) = mcp
+        .call(
+            "create_upload",
+            json!({ "filename": "big.md", "title": "Big" }),
+        )
+        .await;
+    assert!(!err, "{ticket}");
+    let res = Client::new()
+        .put(ticket["upload_url"].as_str().unwrap())
+        .body("# Big")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let big: Value = res.json().await.unwrap();
+    assert_eq!(big["kind"], "markdown");
+    let (err, _) = mcp
+        .call("delete_file", json!({ "file_id": big["id"] }))
+        .await;
+    assert!(!err);
 
     let (err, share) = mcp
         .call(
@@ -1776,4 +1799,120 @@ async fn pdf_download() {
     let (_, v) = app.view(&c, d["id"].as_str().unwrap()).await;
     let res = c.get(v["pdf_url"].as_str().unwrap()).send().await.unwrap();
     assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn upload_urls() {
+    let app = spawn().await;
+    let mint = |body: Value| {
+        let c = app.api();
+        let url = app.url("/api/uploads");
+        async move {
+            let res = c.post(url).json(&body).send().await.unwrap();
+            assert_eq!(res.status(), StatusCode::CREATED);
+            res.json::<Value>().await.unwrap()
+        }
+    };
+    let anon = Client::new();
+
+    // new file from raw binary bytes, no bearer on the PUT
+    let png: Vec<u8> = vec![0x89, b'P', b'N', b'G', 0, 0xff, 0xfe, 1, 2, 3];
+    let t = mint(json!({ "filename": "shot.png", "title": "Shot", "access": "recipients" })).await;
+    let url = t["upload_url"].as_str().unwrap().to_string();
+    assert!(url.starts_with(&app.url("/upload/")), "{t}");
+    assert!(t["curl"].as_str().unwrap().contains(&url));
+    assert!(t["file_id"].is_null());
+    let res = anon.put(&url).body(png.clone()).send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let file: Value = res.json().await.unwrap();
+    assert_eq!(file["kind"], "image");
+    assert_eq!(file["title"], "Shot");
+    assert_eq!(file["access"], "recipients");
+    assert_eq!(file["size"], png.len() as i64);
+    let file_id = file["id"].as_str().unwrap().to_string();
+    assert!(file_id.starts_with("shot-"));
+
+    // one-time: a second PUT to the same URL is refused and creates nothing
+    let res = anon.put(&url).body("again").send().await.unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let listed: Value = app
+        .api()
+        .get(app.url("/api/files"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(listed["files"].as_array().unwrap().len(), 1);
+
+    // new version; curl --data-binary's form content type is ignored, the filename decides
+    let t = mint(json!({ "file_id": file_id, "filename": "shot.html" })).await;
+    assert_eq!(t["file_id"], file_id.as_str());
+    let res = anon
+        .put(t["upload_url"].as_str().unwrap())
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .body("<h1>now html</h1>")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let v2: Value = res.json().await.unwrap();
+    assert_eq!(v2["version"], 2);
+    assert_eq!(v2["kind"], "html");
+    assert_eq!(v2["id"], file_id.as_str());
+
+    // unknown file, bad expiry, unknown or expired token, empty body
+    let res = app
+        .api()
+        .post(app.url("/api/uploads"))
+        .json(&json!({ "file_id": "nope-123" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    let res = app
+        .api()
+        .post(app.url("/api/uploads"))
+        .json(&json!({ "expires_at": "tomorrow" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let res = anon
+        .put(app.url("/upload/doesnotexist"))
+        .body("x")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let t = mint(json!({ "filename": "late.md" })).await;
+    sqlx::query("UPDATE upload_tickets SET expires_at = 0")
+        .execute(&app.state.db)
+        .await
+        .unwrap();
+    let res = anon
+        .put(t["upload_url"].as_str().unwrap())
+        .body("# late")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    let t = mint(json!({ "filename": "empty.md" })).await;
+    let res = anon
+        .put(t["upload_url"].as_str().unwrap())
+        .body("")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+
+    // minting needs the bearer
+    let res = anon
+        .post(app.url("/api/uploads"))
+        .json(&json!({}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
 }

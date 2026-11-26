@@ -26,7 +26,7 @@ use crate::{
     db::{self, Db},
     mcp, oauth,
     ratelimit::RateLimiter,
-    shell, view,
+    shell, upload, view,
 };
 
 #[derive(Clone)]
@@ -119,6 +119,7 @@ pub fn build_app(state: AppState) -> HostRouter {
         .merge(view::router())
         .merge(oauth::router())
         .merge(crate::webauth::router())
+        .merge(upload::router())
         .nest("/api", api::router())
         .merge(mcp::router(state.clone()))
         .layer(DefaultBodyLimit::max(cfg.max_upload_bytes + 1024 * 1024))
